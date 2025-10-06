@@ -7,8 +7,8 @@ import os
 from app.db import get_db
 from app.pointage.utils import format_pointages_by_date
 
-# Fuseau horaire GMT+0 (UTC)
-TIMEZONE = timezone.utc
+# Fuseau horaire GMT+1
+TIMEZONE = timezone(timedelta(hours=1))
 
 
 async def get_all_agents() -> List[Dict[str, Any]]:
@@ -47,10 +47,10 @@ async def get_dashboard_stats() -> Dict[str, int]:
             print(f"Erreur lors de la récupération du nombre total d'agents: {str(e)}")
             total_agents = 0
         
-        # Date du jour (en heure GMT+0)
-        now_utc = datetime.now(TIMEZONE)
-        today = now_utc.date().isoformat()
-        print(f"Date du jour (GMT+0): {today} - Heure: {now_utc.strftime('%H:%M:%S')}")
+        # Date du jour (en heure GMT+1)
+        now_gmt1 = datetime.now(TIMEZONE)
+        today = now_gmt1.date().isoformat()
+        print(f"Date du jour (GMT+1): {today} - Heure: {now_gmt1.strftime('%H:%M:%S')}")
         
         # Pointages du jour
         try:
