@@ -6,6 +6,7 @@ const PointagesDetailles = () => {
   const [pointages, setPointages] = useState([])
   const [agents, setAgents] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   
   // Filtres
   const [startDate, setStartDate] = useState('')
@@ -102,9 +103,97 @@ const PointagesDetailles = () => {
   
   const filteredPointages = getFilteredPointages()
   
+  // Exporter en CSV
+  const handleExportCSV = () => {
+    if (filteredPointages.length === 0) {
+      toast.error('Aucune donnée à exporter')
+      return
+    }
+    
+    setIsExporting(true)
+    
+    try {
+      // Créer les en-têtes CSV
+      let headers = ['Agent', 'Email', 'Date']
+      
+      if (!selectedSession || selectedSession === 'matin') {
+        headers.push('Matin - Arrivée', 'Matin - Sortie')
+      }
+      if (!selectedSession || selectedSession === 'apres-midi') {
+        headers.push('Après-midi - Arrivée', 'Après-midi - Sortie')
+      }
+      
+      // Créer les lignes de données
+      const rows = []
+      filteredPointages.forEach(agent => {
+        agent.pointages.forEach(pointage => {
+          const row = [
+            agent.nom,
+            agent.email,
+            formatDateForDisplay(pointage.date)
+          ]
+          
+          if (!selectedSession || selectedSession === 'matin') {
+            row.push(pointage.matin_arrivee || '-')
+            row.push(pointage.matin_sortie || '-')
+          }
+          if (!selectedSession || selectedSession === 'apres-midi') {
+            row.push(pointage.apres_midi_arrivee || '-')
+            row.push(pointage.apres_midi_sortie || '-')
+          }
+          
+          rows.push(row)
+        })
+      })
+      
+      // Convertir en CSV
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+      
+      // Créer le fichier et le télécharger
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `pointages_detailles_${startDate}_${endDate}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.success('Export CSV réussi !')
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error)
+      toast.error('Erreur lors de l\'export CSV')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+  
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Pointages Détaillés</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Pointages Détaillés</h1>
+        
+        <button
+          onClick={handleExportCSV}
+          disabled={isExporting || filteredPointages.length === 0}
+          className="btn btn-primary flex items-center space-x-2"
+        >
+          {isExporting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+              <span>Export en cours...</span>
+            </>
+          ) : (
+            <>
+              <i className="fas fa-download"></i>
+              <span>Exporter CSV</span>
+            </>
+          )}
+        </button>
+      </div>
       
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
