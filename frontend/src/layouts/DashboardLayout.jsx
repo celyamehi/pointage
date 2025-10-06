@@ -82,70 +82,90 @@ const DashboardLayout = ({ isAdmin = false }) => {
         </div>
       </div>
       
+      {/* Overlay pour fermer le menu mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+      
       {/* Contenu principal */}
       <div className="md:pl-64 flex flex-col flex-1">
         {/* Barre de navigation supérieure pour mobile */}
-        <div className="sticky top-0 z-10 md:hidden bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-30 md:hidden bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between h-16 px-4">
             <h1 className="text-xl font-bold text-primary-600">Collable</h1>
             <button
               type="button"
-              className="bg-white p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+              className="bg-white p-3 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
-              <span className="sr-only">Ouvrir le menu</span>
-              <i className={`fas fa-${isMobileMenuOpen ? 'times' : 'bars'}`}></i>
+              <i className={`fas fa-${isMobileMenuOpen ? 'times' : 'bars'} text-2xl`}></i>
             </button>
           </div>
           
-          {/* Menu mobile */}
-          {isMobileMenuOpen && (
-            <div className="bg-white shadow-lg rounded-b-lg">
+          {/* Menu mobile avec animation */}
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+              isMobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="bg-white shadow-lg border-t border-gray-100">
               <div className="pt-2 pb-3 space-y-1">
                 {navigation.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.to}
                     className={({ isActive }) =>
-                      `block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                      `flex items-center pl-4 pr-4 py-3 border-l-4 text-base font-medium transition-colors ${
                         isActive
                           ? 'border-primary-500 text-primary-700 bg-primary-50'
-                          : 'border-transparent text-gray-600 hover:bg-gray-100'
+                          : 'border-transparent text-gray-600 hover:bg-gray-100 hover:border-gray-300'
                       }`
                     }
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <span className="mr-3">
-                      <i className={`fas fa-${item.icon}`}></i>
+                    <span className="mr-3 w-6 flex items-center justify-center">
+                      <i className={`fas fa-${item.icon} text-lg`}></i>
                     </span>
                     {item.name}
                   </NavLink>
                 ))}
               </div>
               <div className="pt-4 pb-3 border-t border-gray-200">
-                <div className="flex items-center px-4">
+                <div className="flex items-center px-4 py-2">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                      <i className="fas fa-user text-primary-600"></i>
+                    </div>
+                  </div>
                   <div className="ml-3">
                     <div className="text-base font-medium text-gray-800">{user?.nom}</div>
-                    <div className="text-sm font-medium text-gray-500">{user?.role === 'admin' ? 'Administrateur' : 'Agent'}</div>
+                    <div className="text-sm font-medium text-gray-500">{user?.email}</div>
+                    <div className="text-xs font-medium text-gray-400 mt-1">
+                      {user?.role === 'admin' ? '👑 Administrateur' : '👤 Agent'}
+                    </div>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1">
+                <div className="mt-3 space-y-1 px-2">
                   <button
                     onClick={() => {
                       handleLogout()
                       setIsMobileMenuOpen(false)
                     }}
-                    className="block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:bg-red-50"
+                    className="flex items-center w-full px-3 py-2 text-base font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <span className="mr-3">
-                      <i className="fas fa-sign-out-alt"></i>
+                    <span className="mr-3 w-6 flex items-center justify-center">
+                      <i className="fas fa-sign-out-alt text-lg"></i>
                     </span>
                     Déconnexion
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
         
         {/* Contenu de la page */}
