@@ -13,15 +13,16 @@ TIMEZONE = timezone(timedelta(hours=1))
 
 async def get_all_agents() -> List[Dict[str, Any]]:
     """
-    Récupère tous les agents
+    Récupère tous les agents (sans l'admin)
     """
     try:
-        print("Récupération de tous les agents")
+        print("Récupération de tous les agents (sans admin)")
         db = await get_db()
         
-        # Supabase ne fonctionne pas correctement avec await
-        result = db.table("agents").select("id", "nom", "email", "role", "created_at").execute()
+        # Récupérer tous les agents sauf l'admin
+        result = db.table("agents").select("id", "nom", "email", "role", "created_at").neq("email", "admin@collable.fr").execute()
         print(f"Résultat de la requête: {result}")
+        print(f"Nombre d'agents (sans admin): {len(result.data) if result.data else 0}")
         
         return result.data if result.data else []
     except Exception as e:
@@ -37,12 +38,12 @@ async def get_dashboard_stats() -> Dict[str, int]:
         print("Récupération des statistiques pour le tableau de bord")
         db = await get_db()
         
-        # Nombre total d'agents
+        # Nombre total d'agents (sans l'admin)
         try:
-            agents_result = db.table("agents").select("*").execute()
+            agents_result = db.table("agents").select("*").neq("email", "admin@collable.fr").execute()
             print(f"Résultat de la requête agents: {agents_result}")
             total_agents = len(agents_result.data) if agents_result.data else 0
-            print(f"Nombre total d'agents: {total_agents}")
+            print(f"Nombre total d'agents (sans admin): {total_agents}")
         except Exception as e:
             print(f"Erreur lors de la récupération du nombre total d'agents: {str(e)}")
             total_agents = 0
@@ -123,9 +124,9 @@ async def get_agents_with_pointages(start_date: Optional[date] = None, end_date:
             end_date = start_date + timedelta(days=6)  # Dimanche de la semaine en cours
             print(f"Date de fin par défaut: {end_date}")
         
-        # Récupérer tous les agents
+        # Récupérer tous les agents (sans l'admin)
         try:
-            agents_query = db.table("agents").select("id", "nom", "email", "role")
+            agents_query = db.table("agents").select("id", "nom", "email", "role").neq("email", "admin@collable.fr")
             
             if search:
                 agents_query = agents_query.or_(f"nom.ilike.%{search}%,email.ilike.%{search}%")
