@@ -40,12 +40,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
         
         # Nombre total d'agents
         try:
-            agents_result = db.table("agents").select("count").execute()
+            agents_result = db.table("agents").select("*").execute()
             print(f"Résultat de la requête agents: {agents_result}")
-            total_agents = agents_result.count if hasattr(agents_result, 'count') else 0
-            if not hasattr(agents_result, 'count'):
-                # Alternative si count n'est pas disponible
-                total_agents = len(agents_result.data) if hasattr(agents_result, 'data') and agents_result.data else 0
+            total_agents = len(agents_result.data) if agents_result.data else 0
             print(f"Nombre total d'agents: {total_agents}")
         except Exception as e:
             print(f"Erreur lors de la récupération du nombre total d'agents: {str(e)}")
@@ -58,13 +55,11 @@ async def get_dashboard_stats() -> Dict[str, int]:
         
         # Pointages du jour
         try:
-            pointages_result = db.table("pointages").select("count").eq("date_pointage", today).execute()
+            pointages_result = db.table("pointages").select("*").eq("date_pointage", today).execute()
             print(f"Résultat de la requête pointages: {pointages_result}")
-            pointages_aujourd_hui = pointages_result.count if hasattr(pointages_result, 'count') else 0
-            if not hasattr(pointages_result, 'count'):
-                # Alternative si count n'est pas disponible
-                pointages_aujourd_hui = len(pointages_result.data) if hasattr(pointages_result, 'data') and pointages_result.data else 0
+            pointages_aujourd_hui = len(pointages_result.data) if pointages_result.data else 0
             print(f"Nombre de pointages aujourd'hui: {pointages_aujourd_hui}")
+            print(f"Détails des pointages: {pointages_result.data}")
         except Exception as e:
             print(f"Erreur lors de la récupération des pointages du jour: {str(e)}")
             pointages_aujourd_hui = 0
