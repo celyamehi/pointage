@@ -3,9 +3,13 @@ from typing import List, Dict, Any, Optional
 import pandas as pd
 import io
 import os
+from zoneinfo import ZoneInfo
 
 from app.db import get_db
 from app.pointage.utils import format_pointages_by_date
+
+# Fuseau horaire pour la France
+TIMEZONE = ZoneInfo("Europe/Paris")
 
 
 async def get_all_agents() -> List[Dict[str, Any]]:
@@ -47,9 +51,10 @@ async def get_dashboard_stats() -> Dict[str, int]:
             print(f"Erreur lors de la récupération du nombre total d'agents: {str(e)}")
             total_agents = 0
         
-        # Date du jour
-        today = date.today().isoformat()
-        print(f"Date du jour: {today}")
+        # Date du jour (en heure de Paris)
+        now_paris = datetime.now(TIMEZONE)
+        today = now_paris.date().isoformat()
+        print(f"Date du jour (Paris): {today} - Heure: {now_paris.strftime('%H:%M:%S')}")
         
         # Pointages du jour
         try:

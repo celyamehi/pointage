@@ -5,8 +5,12 @@ import os
 from io import BytesIO
 from typing import Tuple, Dict, Any
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.db import get_db
+
+# Fuseau horaire pour la France
+TIMEZONE = ZoneInfo("Europe/Paris")
 
 
 async def generate_qrcode(data: str) -> Tuple[str, str]:
@@ -81,12 +85,14 @@ async def create_new_qrcode() -> Dict[str, Any]:
         # Créer le QR code
         image_url, qrcode_data = await generate_qrcode(code_unique)
         
-        # Enregistrer dans la base de données
+        # Enregistrer dans la base de données avec l'heure de Paris
+        now_paris = datetime.now(TIMEZONE)
         new_qrcode = {
             "code_unique": code_unique,
-            "date_generation": datetime.now().isoformat(),
+            "date_generation": now_paris.isoformat(),
             "actif": True
         }
+        print(f"🕒 Date de génération (Paris): {now_paris.strftime('%Y-%m-%d %H:%M:%S')}")
         
         print(f"Insertion du QR code dans la base de données: {new_qrcode}")
         result = db.table("qrcodes").insert(new_qrcode).execute()
