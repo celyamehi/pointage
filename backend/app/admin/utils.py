@@ -32,7 +32,7 @@ async def get_all_agents() -> List[Dict[str, Any]]:
 
 async def get_dashboard_stats() -> Dict[str, int]:
     """
-    Récupère les statistiques pour le tableau de bord
+    Récupère les statistiques pour le tableau de bord avec détails matin/après-midi
     """
     try:
         print("Récupération des statistiques pour le tableau de bord")
@@ -41,7 +41,6 @@ async def get_dashboard_stats() -> Dict[str, int]:
         # Nombre total d'agents (sans l'admin)
         try:
             agents_result = db.table("agents").select("*").neq("email", "admin@collable.fr").execute()
-            print(f"Résultat de la requête agents: {agents_result}")
             total_agents = len(agents_result.data) if agents_result.data else 0
             print(f"Nombre total d'agents (sans admin): {total_agents}")
         except Exception as e:
@@ -51,58 +50,83 @@ async def get_dashboard_stats() -> Dict[str, int]:
         # Date du jour (en heure GMT+1)
         now_gmt1 = datetime.now(TIMEZONE)
         today = now_gmt1.date().isoformat()
-        print(f"Date du jour (GMT+1): {today} - Heure: {now_gmt1.strftime('%H:%M:%S')}")
+        print(f"Date du jour (GMT+1): {today}")
         
-        # Pointages du jour
+        # Récupérer l'ID de l'admin pour l'exclure
         try:
-            pointages_result = db.table("pointages").select("*").eq("date_pointage", today).execute()
-            print(f"Résultat de la requête pointages: {pointages_result}")
-            pointages_aujourd_hui = len(pointages_result.data) if pointages_result.data else 0
-            print(f"Nombre de pointages aujourd'hui: {pointages_aujourd_hui}")
-            print(f"Détails des pointages: {pointages_result.data}")
-        except Exception as e:
-            print(f"Erreur lors de la récupération des pointages du jour: {str(e)}")
-            pointages_aujourd_hui = 0
-        
-        # Agents présents aujourd'hui (au moins un pointage) - Exclure l'admin
-        try:
-            # Récupérer l'ID de l'admin
             admin_result = db.table("agents").select("id").eq("email", "admin@collable.fr").execute()
             admin_id = admin_result.data[0]["id"] if admin_result.data else None
-            print(f"ID de l'admin à exclure: {admin_id}")
-            
-            agents_presents_result = db.table("pointages").select("agent_id").eq("date_pointage", today).execute()
-            print(f"Résultat de la requête agents présents: {agents_presents_result}")
-            agents_presents = set()
-            if agents_presents_result.data:
-                for pointage in agents_presents_result.data:
-                    # Exclure l'admin
-                    if pointage["agent_id"] != admin_id:
-                        agents_presents.add(pointage["agent_id"])
-            
-            agents_presents_aujourd_hui = len(agents_presents)
-            print(f"Nombre d'agents présents aujourd'hui (sans admin): {agents_presents_aujourd_hui}")
         except Exception as e:
-            print(f"Erreur lors de la récupération des agents présents: {str(e)}")
-            agents_presents_aujourd_hui = 0
+            admin_id = None
         
+        # Pointages du matin
+        try:
+            pointages_matin_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "matin").execute()
+            pointages_matin = len(pointages_matin_result.data) if pointages_matin_result.data else 0
+            
+            agents_presents_matin = set()
+            if pointages_matin_result.data:
+                for pointage in pointages_matin_result.data:
+                    if pointage["agent_id"] != admin_id:
+                        agents_presents_matin.add(pointage["agent_id"])
+            
+            agents_presents_matin_count = len(agents_presents_matin)
+            agents_absents_matin = max(0, total_agents - agents_presents_matin_count)
+        except Exception as e:
+            pointages_matin = 0
+            agents_presents_matin_count = 0
+            agents_absents_matin = total_agents
+            agents_presents_matin = set()
+        
+        # Pointages de l'après-midi
+        try:
+            pointages_aprem_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "apres-midi").execute()
+            pointages_aprem = len(pointages_aprem_result.data) if pointages_aprem_result.data else 0
+            
+            agents_presents_aprem = set()
+            if pointages_aprem_result.data:
+                for pointage in pointages_aprem_result.data:
+                    if pointage["agent_id"] != admin_id:
+                        agents_presents_aprem.add(pointage["agent_id"])
+            
+            agents_presents_aprem_count = len(agents_presents_aprem)
+            agents_absents_aprem = max(0, total_agents - agents_presents_aprem_count)
+        except Exception as e:
+            pointages_aprem = 0
+            agents_presents_aprem_count = 0
+            agents_absents_aprem = total_agents
+            agents_presents_aprem = set()
+        
+        pointages_aujourd_hui = pointages_matin + pointages_aprem
+        agents_presents_total = agents_presents_matin.union(agents_presents_aprem)
+        agents_presents_aujourd_hui = len(agents_presents_total)
         agents_absents_aujourd_hui = max(0, total_agents - agents_presents_aujourd_hui)
-        print(f"Nombre d'agents absents aujourd'hui: {agents_absents_aujourd_hui}")
         
         return {
             "total_agents": total_agents,
             "agents_presents_aujourd_hui": agents_presents_aujourd_hui,
             "agents_absents_aujourd_hui": agents_absents_aujourd_hui,
-            "pointages_aujourd_hui": pointages_aujourd_hui
+            "pointages_aujourd_hui": pointages_aujourd_hui,
+            "pointages_matin": pointages_matin,
+            "agents_presents_matin": agents_presents_matin_count,
+            "agents_absents_matin": agents_absents_matin,
+            "pointages_aprem": pointages_aprem,
+            "agents_presents_aprem": agents_presents_aprem_count,
+            "agents_absents_aprem": agents_absents_aprem
         }
     except Exception as e:
-        print(f"Erreur générale lors de la récupération des statistiques: {str(e)}")
-        # Retourner des valeurs par défaut en cas d'erreur
+        print(f"Erreur: {str(e)}")
         return {
             "total_agents": 0,
             "agents_presents_aujourd_hui": 0,
             "agents_absents_aujourd_hui": 0,
-            "pointages_aujourd_hui": 0
+            "pointages_aujourd_hui": 0,
+            "pointages_matin": 0,
+            "agents_presents_matin": 0,
+            "agents_absents_matin": 0,
+            "pointages_aprem": 0,
+            "agents_presents_aprem": 0,
+            "agents_absents_aprem": 0
         }
 
 
