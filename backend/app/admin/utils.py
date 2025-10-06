@@ -1,15 +1,14 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Dict, Any, Optional
 import pandas as pd
 import io
 import os
-from zoneinfo import ZoneInfo
 
 from app.db import get_db
 from app.pointage.utils import format_pointages_by_date
 
-# Fuseau horaire pour la France
-TIMEZONE = ZoneInfo("Europe/Paris")
+# Fuseau horaire GMT+0 (UTC)
+TIMEZONE = timezone.utc
 
 
 async def get_all_agents() -> List[Dict[str, Any]]:
@@ -48,10 +47,10 @@ async def get_dashboard_stats() -> Dict[str, int]:
             print(f"Erreur lors de la récupération du nombre total d'agents: {str(e)}")
             total_agents = 0
         
-        # Date du jour (en heure de Paris)
-        now_paris = datetime.now(TIMEZONE)
-        today = now_paris.date().isoformat()
-        print(f"Date du jour (Paris): {today} - Heure: {now_paris.strftime('%H:%M:%S')}")
+        # Date du jour (en heure GMT+0)
+        now_utc = datetime.now(TIMEZONE)
+        today = now_utc.date().isoformat()
+        print(f"Date du jour (GMT+0): {today} - Heure: {now_utc.strftime('%H:%M:%S')}")
         
         # Pointages du jour
         try:
@@ -64,17 +63,24 @@ async def get_dashboard_stats() -> Dict[str, int]:
             print(f"Erreur lors de la récupération des pointages du jour: {str(e)}")
             pointages_aujourd_hui = 0
         
-        # Agents présents aujourd'hui (au moins un pointage)
+        # Agents présents aujourd'hui (au moins un pointage) - Exclure l'admin
         try:
+            # Récupérer l'ID de l'admin
+            admin_result = db.table("agents").select("id").eq("email", "admin@collable.fr").execute()
+            admin_id = admin_result.data[0]["id"] if admin_result.data else None
+            print(f"ID de l'admin à exclure: {admin_id}")
+            
             agents_presents_result = db.table("pointages").select("agent_id").eq("date_pointage", today).execute()
             print(f"Résultat de la requête agents présents: {agents_presents_result}")
             agents_presents = set()
             if agents_presents_result.data:
                 for pointage in agents_presents_result.data:
-                    agents_presents.add(pointage["agent_id"])
+                    # Exclure l'admin
+                    if pointage["agent_id"] != admin_id:
+                        agents_presents.add(pointage["agent_id"])
             
             agents_presents_aujourd_hui = len(agents_presents)
-            print(f"Nombre d'agents présents aujourd'hui: {agents_presents_aujourd_hui}")
+            print(f"Nombre d'agents présents aujourd'hui (sans admin): {agents_presents_aujourd_hui}")
         except Exception as e:
             print(f"Erreur lors de la récupération des agents présents: {str(e)}")
             agents_presents_aujourd_hui = 0

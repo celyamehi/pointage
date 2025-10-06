@@ -93,7 +93,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
       {/* Contenu principal */}
       <div className="md:pl-64 flex flex-col flex-1">
         {/* Barre de navigation supérieure - visible sur tous les écrans */}
-        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="sticky top-0 z-50 bg-white border-b border-red-200 shadow-sm">
           <div className="flex items-center justify-between h-16 px-4">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-primary-600">Collable</h1>

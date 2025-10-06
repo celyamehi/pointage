@@ -1,22 +1,21 @@
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timezone
 from typing import Dict, Any, List, Optional
 import uuid
-from zoneinfo import ZoneInfo
 
 from app.db import get_db
 from app.qrcode.utils import validate_qrcode
 
-# Fuseau horaire pour la France
-TIMEZONE = ZoneInfo("Europe/Paris")
+# Fuseau horaire GMT+0 (UTC)
+TIMEZONE = timezone.utc
 
 
 async def determine_session() -> str:
     """
     Détermine la session (matin ou après-midi) en fonction de l'heure actuelle
     """
-    now_paris = datetime.now(TIMEZONE)
-    current_hour = now_paris.hour
-    print(f"🕒 Heure actuelle (Paris): {now_paris.strftime('%H:%M:%S')} - Session: {'matin' if current_hour < 12 else 'après-midi'}")
+    now_utc = datetime.now(TIMEZONE)
+    current_hour = now_utc.hour
+    print(f"🕒 Heure actuelle (GMT+0): {now_utc.strftime('%H:%M:%S')} - Session: {'matin' if current_hour < 12 else 'après-midi'}")
     
     if current_hour < 12:
         return "matin"
@@ -40,29 +39,30 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     
     # Vérifier si l'agent a déjà pointé pour cette session aujourd'hui
     try:
-        # Utiliser la date de Paris
-        now_paris = datetime.now(TIMEZONE)
-        today = now_paris.date().isoformat()
+        # Utiliser la date GMT+0
+        now_utc = datetime.now(TIMEZONE)
+        today = now_utc.date().isoformat()
         print(f"Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
         existing_pointage = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
         
         if existing_pointage.data and len(existing_pointage.data) > 0:
             print(f"Pointage existant trouvé pour l'agent {agent_id}")
-            raise ValueError(f"Vous avez déjà pointé pour la session {session} aujourd'hui")
+            session_fr = "du matin" if session == "matin" else "de l'après-midi"
+            raise ValueError(f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour (matin et après-midi).")
     except Exception as e:
         print(f"Erreur lors de la vérification des pointages existants: {str(e)}")
         # Continuer même en cas d'erreur
     
-    # Créer le pointage avec l'heure de Paris
-    now_paris = datetime.now(TIMEZONE)
+    # Créer le pointage avec l'heure GMT+0
+    now_utc = datetime.now(TIMEZONE)
     new_pointage = {
         "id": str(uuid.uuid4()),
         "agent_id": agent_id,
         "date_pointage": today,
-        "heure_pointage": now_paris.strftime("%H:%M:%S"),
+        "heure_pointage": now_utc.strftime("%H:%M:%S"),
         "session": session
     }
-    print(f"📌 Pointage créé - Date: {today}, Heure: {now_paris.strftime('%H:%M:%S')}, Session: {session}")
+    print(f"📌 Pointage créé - Date: {today}, Heure (GMT+0): {now_utc.strftime('%H:%M:%S')}, Session: {session}")
     
     try:
         print(f"Insertion d'un nouveau pointage: {new_pointage}")

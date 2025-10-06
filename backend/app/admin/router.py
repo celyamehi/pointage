@@ -46,6 +46,34 @@ async def get_agents_pointages(
         )
 
 
+@router.get("/historique-pointages")
+async def get_historique_pointages(
+    limit: int = Query(100, description="Nombre maximum de pointages à récupérer"),
+    offset: int = Query(0, description="Décalage pour la pagination"),
+    current_user: User = Depends(get_admin_user)
+):
+    """
+    Endpoint pour récupérer l'historique complet des pointages (admin uniquement)
+    """
+    try:
+        from app.db import get_db
+        db = await get_db()
+        
+        # Récupérer les pointages avec les informations des agents
+        result = db.table("pointages").select("*, agents(nom, email)").order("date_pointage", desc=True).order("heure_pointage", desc=True).limit(limit).range(offset, offset + limit - 1).execute()
+        
+        return {
+            "pointages": result.data if result.data else [],
+            "total": len(result.data) if result.data else 0
+        }
+    except Exception as e:
+        print(f"Erreur lors de la récupération de l'historique: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération de l'historique: {str(e)}"
+        )
+
+
 @router.get("/agents")
 async def get_agents(current_user: User = Depends(get_admin_user)):
     """
