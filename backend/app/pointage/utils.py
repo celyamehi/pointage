@@ -45,15 +45,21 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     
     try:
         existing_pointage = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
+        print(f"📊 Résultat de la vérification: {existing_pointage.data}")
         
         if existing_pointage.data and len(existing_pointage.data) > 0:
-            print(f"❌ Pointage existant trouvé pour l'agent {agent_id} - Session: {session}")
+            print(f"❌ POINTAGE DÉJÀ EXISTANT pour l'agent {agent_id} - Session: {session}")
+            print(f"❌ Nombre de pointages trouvés: {len(existing_pointage.data)}")
+            print(f"❌ Détails: {existing_pointage.data}")
             session_fr = "du matin" if session == "matin" else "de l'après-midi"
-            raise ValueError(f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour : UN SEUL pointage le matin et UN SEUL l'après-midi.")
+            error_msg = f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour : UN SEUL pointage le matin et UN SEUL l'après-midi."
+            print(f"❌ Message d'erreur: {error_msg}")
+            raise ValueError(error_msg)
         
         print(f"✅ Aucun pointage existant pour cette session - Création autorisée")
     except ValueError as ve:
         # Re-lever les erreurs de validation
+        print(f"🔴 ValueError capturée et re-levée: {str(ve)}")
         raise ve
     except Exception as e:
         print(f"⚠️ Erreur lors de la vérification des pointages existants: {str(e)}")
