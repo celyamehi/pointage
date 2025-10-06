@@ -27,8 +27,10 @@ class PointageResponse(BaseModel):
 
 class PointageJour(BaseModel):
     date: date
-    matin: Optional[time] = None
-    apres_midi: Optional[time] = None
+    matin_arrivee: Optional[time] = None
+    matin_sortie: Optional[time] = None
+    apres_midi_arrivee: Optional[time] = None
+    apres_midi_sortie: Optional[time] = None
 
 
 class PointageAgent(BaseModel):

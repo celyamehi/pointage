@@ -133,32 +133,61 @@ const MesPointages = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pointage Matin
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" colSpan="2">
+                    Matin (8h-12h30)
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pointage Après-midi
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" colSpan="2">
+                    Après-midi (13h-18h)
+                  </th>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th scope="col" className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Arrivée
+                  </th>
+                  <th scope="col" className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sortie
+                  </th>
+                  <th scope="col" className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Arrivée
+                  </th>
+                  <th scope="col" className="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sortie
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {pointages.map((pointage, index) => (
                   <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatDateForDisplay(pointage.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.matin ? (
-                        <span className="text-green-600">{pointage.matin}</span>
+                      {pointage.matin_arrivee ? (
+                        <span className="text-green-600 font-semibold">✓ {pointage.matin_arrivee}</span>
                       ) : (
-                        <span className="text-red-500">Non pointé</span>
+                        <span className="text-gray-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.apres_midi ? (
-                        <span className="text-green-600">{pointage.apres_midi}</span>
+                      {pointage.matin_sortie ? (
+                        <span className="text-blue-600 font-semibold">✓ {pointage.matin_sortie}</span>
                       ) : (
-                        <span className="text-red-500">Non pointé</span>
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {pointage.apres_midi_arrivee ? (
+                        <span className="text-green-600 font-semibold">✓ {pointage.apres_midi_arrivee}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {pointage.apres_midi_sortie ? (
+                        <span className="text-blue-600 font-semibold">✓ {pointage.apres_midi_sortie}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
                       )}
                     </td>
                   </tr>

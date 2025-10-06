@@ -26,6 +26,9 @@ async def determine_session() -> str:
 async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     """
     Crée un nouveau pointage pour un agent
+    Nouvelle logique : 4 pointages par jour
+    - Matin : arrivée + sortie
+    - Après-midi : arrivée + sortie
     """
     db = await get_db()
     
@@ -37,33 +40,43 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     # Déterminer la session (matin ou après-midi)
     session = await determine_session()
     
-    # Vérifier si l'agent a déjà pointé pour cette session aujourd'hui
     # Utiliser la date GMT+1
     now_gmt1 = datetime.now(TIMEZONE)
     today = now_gmt1.date().isoformat()
-    print(f"Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
     
+    print(f"🔍 Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
+    
+    # Vérifier les pointages existants pour cette session
     try:
-        existing_pointage = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
-        print(f"📊 Résultat de la vérification: {existing_pointage.data}")
+        existing_pointages = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
+        print(f"📊 Pointages existants: {existing_pointages.data}")
         
-        if existing_pointage.data and len(existing_pointage.data) > 0:
-            print(f"❌ POINTAGE DÉJÀ EXISTANT pour l'agent {agent_id} - Session: {session}")
-            print(f"❌ Nombre de pointages trouvés: {len(existing_pointage.data)}")
-            print(f"❌ Détails: {existing_pointage.data}")
+        nb_pointages = len(existing_pointages.data) if existing_pointages.data else 0
+        print(f"📊 Nombre de pointages pour cette session: {nb_pointages}")
+        
+        # Déterminer le type de pointage (arrivée ou sortie)
+        if nb_pointages == 0:
+            type_pointage = "arrivee"
+            print(f"✅ Premier pointage de la session → Arrivée")
+        elif nb_pointages == 1:
+            # Vérifier que le premier pointage était une arrivée
+            if existing_pointages.data[0].get("type_pointage") == "arrivee":
+                type_pointage = "sortie"
+                print(f"✅ Deuxième pointage de la session → Sortie")
+            else:
+                raise ValueError(f"Erreur de cohérence dans les pointages")
+        else:
+            # Déjà 2 pointages pour cette session
+            print(f"❌ Limite atteinte: {nb_pointages} pointages pour la session {session}")
             session_fr = "du matin" if session == "matin" else "de l'après-midi"
-            error_msg = f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour : UN SEUL pointage le matin et UN SEUL l'après-midi."
-            print(f"❌ Message d'erreur: {error_msg}")
-            raise ValueError(error_msg)
+            raise ValueError(f"Vous avez déjà effectué vos 2 pointages pour la session {session_fr} (arrivée et sortie). Maximum 4 pointages par jour : 2 le matin et 2 l'après-midi.")
         
-        print(f"✅ Aucun pointage existant pour cette session - Création autorisée")
     except ValueError as ve:
         # Re-lever les erreurs de validation
-        print(f"🔴 ValueError capturée et re-levée: {str(ve)}")
+        print(f"🔴 ValueError: {str(ve)}")
         raise ve
     except Exception as e:
-        print(f"⚠️ Erreur lors de la vérification des pointages existants: {str(e)}")
-        # En cas d'erreur de base de données, on bloque par sécurité
+        print(f"⚠️ Erreur lors de la vérification: {str(e)}")
         raise Exception(f"Erreur lors de la vérification des pointages: {str(e)}")
     
     # Créer le pointage avec l'heure GMT+1
@@ -73,9 +86,11 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
         "agent_id": agent_id,
         "date_pointage": today,
         "heure_pointage": now_gmt1.strftime("%H:%M:%S"),
-        "session": session
+        "session": session,
+        "type_pointage": type_pointage
     }
-    print(f"📌 Pointage créé - Date: {today}, Heure (GMT+1): {now_gmt1.strftime('%H:%M:%S')}, Session: {session}")
+    type_fr = "Arrivée" if type_pointage == "arrivee" else "Sortie"
+    print(f"📌 Pointage créé - Date: {today}, Heure (GMT+1): {now_gmt1.strftime('%H:%M:%S')}, Session: {session}, Type: {type_fr}")
     
     try:
         print(f"Insertion d'un nouveau pointage: {new_pointage}")
@@ -153,7 +168,7 @@ async def format_pointages_by_date(agent_id: str, start_date: Optional[date] = N
         print(f"Erreur lors du formatage des pointages: {str(e)}")
         return []
     
-    # Organiser les pointages par date
+    # Organiser les pointages par date avec arrivée et sortie
     pointages_by_date = {}
     
     for pointage in pointages:
@@ -162,14 +177,25 @@ async def format_pointages_by_date(agent_id: str, start_date: Optional[date] = N
         if date_str not in pointages_by_date:
             pointages_by_date[date_str] = {
                 "date": date_str,
-                "matin": None,
-                "apres_midi": None
+                "matin_arrivee": None,
+                "matin_sortie": None,
+                "apres_midi_arrivee": None,
+                "apres_midi_sortie": None
             }
         
+        # Déterminer le type de pointage
+        type_pointage = pointage.get("type_pointage", "arrivee")
+        
         if pointage["session"] == "matin":
-            pointages_by_date[date_str]["matin"] = pointage["heure_pointage"]
+            if type_pointage == "arrivee":
+                pointages_by_date[date_str]["matin_arrivee"] = pointage["heure_pointage"]
+            else:
+                pointages_by_date[date_str]["matin_sortie"] = pointage["heure_pointage"]
         else:
-            pointages_by_date[date_str]["apres_midi"] = pointage["heure_pointage"]
+            if type_pointage == "arrivee":
+                pointages_by_date[date_str]["apres_midi_arrivee"] = pointage["heure_pointage"]
+            else:
+                pointages_by_date[date_str]["apres_midi_sortie"] = pointage["heure_pointage"]
     
     # Convertir en liste
     return list(pointages_by_date.values())
