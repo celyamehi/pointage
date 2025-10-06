@@ -19,6 +19,7 @@ from app.auth.utils import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
+router = APIRouter()
 
 
 @router.post("/token", response_model=Token)
