@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.db import get_db
 from app.auth.models import User, UserCreate, UserUpdate, Token
@@ -16,17 +19,18 @@ from app.auth.utils import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
-router = APIRouter()
 
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
-    Endpoint pour l'authentification et l'obtention d'un token JWT
+    Endpoint pour obtenir un token d'accès
     """
+    logger.info(f" Tentative de connexion pour l'utilisateur: {form_data.username}")
     user = await authenticate_user(form_data.username, form_data.password)
     
     if not user:
+        logger.warning(f" Échec de connexion pour l'utilisateur: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect",
@@ -35,10 +39,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "user_id": str(user.id)},
-        expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
     )
-    
+    logger.info(f" Connexion réussie pour l'utilisateur: {form_data.username} (role: {user.role})")
     return {"access_token": access_token, "token_type": "bearer"}
 
 

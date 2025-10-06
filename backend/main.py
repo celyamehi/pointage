@@ -5,6 +5,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from datetime import datetime, timedelta
 import os
+import logging
+
+# Configuration des logs
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Import des modules personnalisés
 from app.auth import router as auth_router
@@ -34,7 +42,9 @@ app.add_middleware(
 # Initialisation de la base de données au démarrage
 @app.on_event("startup")
 async def startup_db_client():
+    logger.info("🚀 Démarrage de l'application...")
     await init_db()
+    logger.info("✅ Application démarrée avec succès")
 
 # Inclusion des routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
@@ -45,7 +55,13 @@ app.include_router(admin_router.router, prefix="/api/admin", tags=["Administrati
 # Route racine
 @app.get("/", tags=["Root"])
 async def read_root():
+    logger.info("📍 Accès à la route racine")
     return {"message": "Bienvenue sur l'API du système de pointage Collable"}
+
+# Route de santé pour vérifier que l'API fonctionne
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 # Montage des fichiers statiques (si nécessaire)
 app.mount("/static", StaticFiles(directory="static"), name="static")
