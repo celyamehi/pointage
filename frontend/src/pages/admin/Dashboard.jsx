@@ -27,6 +27,10 @@ const AdminDashboard = () => {
     year: 'numeric'
   })
   
+  // Déterminer la session actuelle (GMT+1)
+  const currentHour = today.getHours()
+  const isAfternoon = currentHour >= 13
+  
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
@@ -40,7 +44,16 @@ const AdminDashboard = () => {
       }
     }
     
+    // Charger les stats au démarrage
     fetchDashboardStats()
+    
+    // Rafraîchir automatiquement toutes les 30 secondes
+    const interval = setInterval(() => {
+      fetchDashboardStats()
+    }, 30000) // 30 secondes
+    
+    // Nettoyer l'intervalle au démontage du composant
+    return () => clearInterval(interval)
   }, [])
   
   return (
@@ -79,10 +92,21 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Matin */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden border-t-4 border-blue-500">
-              <div className="bg-blue-50 px-6 py-4 border-b border-blue-100">
+              <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-blue-800 flex items-center">
                   <span className="mr-2">🌅</span> Matin (8h-12h30)
                 </h3>
+                {isAfternoon && (
+                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
+                    Session terminée
+                  </span>
+                )}
+                {!isAfternoon && (
+                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full flex items-center">
+                    <span className="inline-block w-2 h-2 bg-green-600 rounded-full mr-1 animate-pulse"></span>
+                    En temps réel
+                  </span>
+                )}
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-3 gap-4">
@@ -109,10 +133,21 @@ const AdminDashboard = () => {
             
             {/* Après-midi */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden border-t-4 border-orange-500">
-              <div className="bg-orange-50 px-6 py-4 border-b border-orange-100">
+              <div className="bg-orange-50 px-6 py-4 border-b border-orange-100 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-orange-800 flex items-center">
                   <span className="mr-2">🌇</span> Après-midi (13h-18h)
                 </h3>
+                {!isAfternoon && (
+                  <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                    Pas encore commencé
+                  </span>
+                )}
+                {isAfternoon && (
+                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full flex items-center">
+                    <span className="inline-block w-2 h-2 bg-green-600 rounded-full mr-1 animate-pulse"></span>
+                    En temps réel
+                  </span>
+                )}
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-3 gap-4">
