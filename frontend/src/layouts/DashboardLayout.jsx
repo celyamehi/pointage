@@ -85,17 +85,22 @@ const DashboardLayout = ({ isAdmin = false }) => {
       {/* Overlay pour fermer le menu mobile */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
       
       {/* Contenu principal */}
       <div className="md:pl-64 flex flex-col flex-1">
-        {/* Barre de navigation supérieure pour mobile */}
-        <div className="sticky top-0 z-30 md:hidden bg-white border-b border-gray-200 shadow-sm">
+        {/* Barre de navigation supérieure - visible sur tous les écrans */}
+        <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between h-16 px-4">
-            <h1 className="text-xl font-bold text-primary-600">Collable</h1>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-bold text-primary-600">Collable</h1>
+              <span className="hidden md:inline-block text-sm text-gray-500">
+                {user?.role === 'admin' ? '👑 Administrateur' : '👤 Agent'}
+              </span>
+            </div>
             <button
               type="button"
               className="bg-white p-3 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors"
@@ -106,13 +111,13 @@ const DashboardLayout = ({ isAdmin = false }) => {
             </button>
           </div>
           
-          {/* Menu mobile avec animation */}
+          {/* Menu déroulant avec animation */}
           <div
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            className={`absolute top-full left-0 right-0 transition-all duration-300 ease-in-out overflow-hidden ${
               isMobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="bg-white shadow-lg border-t border-gray-100">
+            <div className="bg-white shadow-lg border-t border-gray-100 md:max-w-md md:ml-auto md:mr-4 md:rounded-b-lg">
               <div className="pt-2 pb-3 space-y-1">
                 {navigation.map((item) => (
                   <NavLink
