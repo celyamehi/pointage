@@ -38,20 +38,27 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     session = await determine_session()
     
     # Vérifier si l'agent a déjà pointé pour cette session aujourd'hui
+    # Utiliser la date GMT+1
+    now_gmt1 = datetime.now(TIMEZONE)
+    today = now_gmt1.date().isoformat()
+    print(f"Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
+    
     try:
-        # Utiliser la date GMT+1
-        now_gmt1 = datetime.now(TIMEZONE)
-        today = now_gmt1.date().isoformat()
-        print(f"Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
         existing_pointage = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
         
         if existing_pointage.data and len(existing_pointage.data) > 0:
-            print(f"Pointage existant trouvé pour l'agent {agent_id}")
+            print(f"❌ Pointage existant trouvé pour l'agent {agent_id} - Session: {session}")
             session_fr = "du matin" if session == "matin" else "de l'après-midi"
-            raise ValueError(f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour (matin et après-midi).")
+            raise ValueError(f"Vous avez déjà pointé pour la session {session_fr} aujourd'hui. Vous ne pouvez pointer que 2 fois par jour : UN SEUL pointage le matin et UN SEUL l'après-midi.")
+        
+        print(f"✅ Aucun pointage existant pour cette session - Création autorisée")
+    except ValueError as ve:
+        # Re-lever les erreurs de validation
+        raise ve
     except Exception as e:
-        print(f"Erreur lors de la vérification des pointages existants: {str(e)}")
-        # Continuer même en cas d'erreur
+        print(f"⚠️ Erreur lors de la vérification des pointages existants: {str(e)}")
+        # En cas d'erreur de base de données, on bloque par sécurité
+        raise Exception(f"Erreur lors de la vérification des pointages: {str(e)}")
     
     # Créer le pointage avec l'heure GMT+1
     now_gmt1 = datetime.now(TIMEZONE)
