@@ -72,7 +72,10 @@ async def get_dashboard_stats() -> Dict[str, int]:
             
             agents_presents_matin_count = len(agents_presents_matin)
             agents_absents_matin = max(0, total_agents - agents_presents_matin_count)
+            
+            print(f"📊 MATIN - Pointages: {pointages_matin}, Présents: {agents_presents_matin_count}, Absents: {agents_absents_matin}")
         except Exception as e:
+            print(f"❌ Erreur stats matin: {str(e)}")
             pointages_matin = 0
             agents_presents_matin_count = 0
             agents_absents_matin = total_agents
@@ -91,7 +94,10 @@ async def get_dashboard_stats() -> Dict[str, int]:
             
             agents_presents_aprem_count = len(agents_presents_aprem)
             agents_absents_aprem = max(0, total_agents - agents_presents_aprem_count)
+            
+            print(f"📊 APRÈS-MIDI - Pointages: {pointages_aprem}, Présents: {agents_presents_aprem_count}, Absents: {agents_absents_aprem}")
         except Exception as e:
+            print(f"❌ Erreur stats après-midi: {str(e)}")
             pointages_aprem = 0
             agents_presents_aprem_count = 0
             agents_absents_aprem = total_agents
@@ -102,7 +108,7 @@ async def get_dashboard_stats() -> Dict[str, int]:
         agents_presents_aujourd_hui = len(agents_presents_total)
         agents_absents_aujourd_hui = max(0, total_agents - agents_presents_aujourd_hui)
         
-        return {
+        result = {
             "total_agents": total_agents,
             "agents_presents_aujourd_hui": agents_presents_aujourd_hui,
             "agents_absents_aujourd_hui": agents_absents_aujourd_hui,
@@ -114,6 +120,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
             "agents_presents_aprem": agents_presents_aprem_count,
             "agents_absents_aprem": agents_absents_aprem
         }
+        
+        print(f"✅ RÉSULTAT FINAL: {result}")
+        return result
     except Exception as e:
         print(f"Erreur: {str(e)}")
         return {
