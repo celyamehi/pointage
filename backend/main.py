@@ -38,6 +38,9 @@ app.add_middleware(
         "http://localhost:5174",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
+        "https://pointage-two.vercel.app",
+        "https://pointage-deux.vercel.app",
+        "https://pointage-p5dr.onrender.com",
         "*"  # Permet toutes les origines en développement
     ],
     allow_credentials=True,
