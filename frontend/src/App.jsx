@@ -19,7 +19,6 @@ import MonProfil from './pages/agent/MonProfil'
 import AdminDashboard from './pages/admin/Dashboard'
 import GestionAgents from './pages/admin/GestionAgents'
 import GestionQRCode from './pages/admin/GestionQRCode'
-import Pointages from './pages/admin/Pointages'
 import PointagesDetailles from './pages/admin/PointagesDetailles'
 
 // Route protégée pour les utilisateurs authentifiés
@@ -78,7 +77,7 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="agents" element={<GestionAgents />} />
         <Route path="qrcode" element={<GestionQRCode />} />
-        <Route path="pointages" element={<Pointages />} />
+        <Route path="pointages" element={<Navigate to="/admin/pointages-detailles" replace />} />
         <Route path="pointages-detailles" element={<PointagesDetailles />} />
       </Route>
       

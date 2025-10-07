@@ -25,7 +25,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'Tableau de bord', to: '/admin', icon: 'home' },
     { name: 'Gestion des Agents', to: '/admin/agents', icon: 'users' },
     { name: 'QR Code', to: '/admin/qrcode', icon: 'qrcode' },
-    { name: 'Pointages Détaillés', to: '/admin/pointages-detailles', icon: 'list' },
+    { name: 'Pointages', to: '/admin/pointages-detailles', icon: 'list' },
   ]
   
   const navigation = isAdmin ? adminNavigation : agentNavigation
