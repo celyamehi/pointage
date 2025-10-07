@@ -30,6 +30,12 @@ export default {
           yellow: '#fff9c4',
           purple: '#e1bee7',
         },
+        collable: {
+          peach: '#F7C7BB',
+          teal: '#175C64',
+          light: '#EEF2F2',
+          dark: '#0E3A40',
+        },
       },
     },
   },
