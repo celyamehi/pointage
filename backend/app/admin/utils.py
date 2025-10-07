@@ -64,12 +64,21 @@ async def get_dashboard_stats() -> Dict[str, int]:
             pointages_matin_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "matin").execute()
             pointages_matin = len(pointages_matin_result.data) if pointages_matin_result.data else 0
             
-            agents_presents_matin = set()
+            # Dictionnaire pour suivre l'état des agents: True = présent, False = sorti
+            agents_status_matin = {}
+            
             if pointages_matin_result.data:
                 for pointage in pointages_matin_result.data:
                     if pointage["agent_id"] != admin_id:
-                        agents_presents_matin.add(pointage["agent_id"])
+                        # Si c'est une arrivée, marquer l'agent comme présent
+                        if pointage.get("type_pointage") == "arrivee":
+                            agents_status_matin[pointage["agent_id"]] = True
+                        # Si c'est une sortie, marquer l'agent comme sorti
+                        elif pointage.get("type_pointage") == "sortie":
+                            agents_status_matin[pointage["agent_id"]] = False
             
+            # Compter uniquement les agents actuellement présents (arrivés mais pas sortis)
+            agents_presents_matin = set(agent_id for agent_id, is_present in agents_status_matin.items() if is_present)
             agents_presents_matin_count = len(agents_presents_matin)
             agents_absents_matin = max(0, total_agents - agents_presents_matin_count)
             
@@ -86,12 +95,21 @@ async def get_dashboard_stats() -> Dict[str, int]:
             pointages_aprem_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "apres-midi").execute()
             pointages_aprem = len(pointages_aprem_result.data) if pointages_aprem_result.data else 0
             
-            agents_presents_aprem = set()
+            # Dictionnaire pour suivre l'état des agents: True = présent, False = sorti
+            agents_status_aprem = {}
+            
             if pointages_aprem_result.data:
                 for pointage in pointages_aprem_result.data:
                     if pointage["agent_id"] != admin_id:
-                        agents_presents_aprem.add(pointage["agent_id"])
+                        # Si c'est une arrivée, marquer l'agent comme présent
+                        if pointage.get("type_pointage") == "arrivee":
+                            agents_status_aprem[pointage["agent_id"]] = True
+                        # Si c'est une sortie, marquer l'agent comme sorti
+                        elif pointage.get("type_pointage") == "sortie":
+                            agents_status_aprem[pointage["agent_id"]] = False
             
+            # Compter uniquement les agents actuellement présents (arrivés mais pas sortis)
+            agents_presents_aprem = set(agent_id for agent_id, is_present in agents_status_aprem.items() if is_present)
             agents_presents_aprem_count = len(agents_presents_aprem)
             agents_absents_aprem = max(0, total_agents - agents_presents_aprem_count)
             
@@ -104,6 +122,8 @@ async def get_dashboard_stats() -> Dict[str, int]:
             agents_presents_aprem = set()
         
         pointages_aujourd_hui = pointages_matin + pointages_aprem
+        
+        # Pour le total de la journée, un agent est présent s'il est présent dans au moins une des deux sessions
         agents_presents_total = agents_presents_matin.union(agents_presents_aprem)
         agents_presents_aujourd_hui = len(agents_presents_total)
         agents_absents_aujourd_hui = max(0, total_agents - agents_presents_aujourd_hui)
