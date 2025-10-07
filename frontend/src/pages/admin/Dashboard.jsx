@@ -6,15 +6,14 @@ import { toast } from 'react-toastify'
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     total_agents: 0,
-    agents_presents_aujourd_hui: 0,
-    agents_absents_aujourd_hui: 0,
-    pointages_aujourd_hui: 0,
-    pointages_matin: 0,
     agents_presents_matin: 0,
     agents_absents_matin: 0,
-    pointages_aprem: 0,
     agents_presents_aprem: 0,
-    agents_absents_aprem: 0
+    agents_absents_aprem: 0,
+    arrivees_matin: 0,
+    arrivees_aprem: 0,
+    pointages_matin: 0,
+    pointages_aprem: 0
   })
   const [isLoading, setIsLoading] = useState(true)
   
@@ -79,13 +78,13 @@ const AdminDashboard = () => {
             </div>
             
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Agents présents aujourd'hui</h3>
-              <p className="text-3xl font-bold text-green-600">{stats.agents_presents_aujourd_hui}</p>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Arrivées matin</h3>
+              <p className="text-3xl font-bold text-blue-600">{stats.arrivees_matin}</p>
             </div>
             
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Pointages aujourd'hui</h3>
-              <p className="text-3xl font-bold text-primary-600">{stats.pointages_aujourd_hui}</p>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Arrivées après-midi</h3>
+              <p className="text-3xl font-bold text-orange-600">{stats.arrivees_aprem}</p>
             </div>
           </div>
           
