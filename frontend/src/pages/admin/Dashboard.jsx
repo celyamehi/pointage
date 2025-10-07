@@ -35,6 +35,7 @@ const AdminDashboard = () => {
     const fetchDashboardStats = async () => {
       try {
         const response = await api.get('/api/admin/dashboard')
+        console.log('📊 Données reçues du backend:', response.data)
         setStats(response.data)
       } catch (error) {
         console.error('Erreur lors de la récupération des statistiques:', error)
@@ -116,11 +117,15 @@ const AdminDashboard = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Présents</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.agents_presents_matin}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {stats.agents_presents_matin !== undefined ? stats.agents_presents_matin : '?'}
+                    </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Absents</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.agents_absents_matin}</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {stats.agents_absents_matin !== undefined ? stats.agents_absents_matin : '?'}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -157,11 +162,15 @@ const AdminDashboard = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Présents</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.agents_presents_aprem}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {stats.agents_presents_aprem !== undefined ? stats.agents_presents_aprem : '?'}
+                    </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Absents</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.agents_absents_aprem}</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {stats.agents_absents_aprem !== undefined ? stats.agents_absents_aprem : '?'}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-200">
