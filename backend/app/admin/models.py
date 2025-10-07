@@ -18,6 +18,12 @@ class DashboardStats(BaseModel):
     agents_presents_aujourd_hui: int
     agents_absents_aujourd_hui: int
     pointages_aujourd_hui: int
+    pointages_matin: int
+    agents_presents_matin: int
+    agents_absents_matin: int
+    pointages_aprem: int
+    agents_presents_aprem: int
+    agents_absents_aprem: int
 
 
 class AgentPointageFilters(BaseModel):
