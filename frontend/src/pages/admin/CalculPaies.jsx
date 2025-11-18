@@ -99,9 +99,7 @@ const CalculPaies = () => {
       'Heures retard',
       'Jours travaillés',
       'Jours absence',
-      'Salaire base',
-      'Déduction absences',
-      'Déduction retards',
+      'Salaire base (heures travaillées)',
       'Frais panier',
       'Frais transport',
       'Salaire net',
@@ -121,8 +119,6 @@ const CalculPaies = () => {
       paie.jours_travailles,
       paie.jours_absence,
       paie.salaire_base,
-      paie.deduction_absences,
-      paie.deduction_retards,
       paie.frais_panier_total,
       paie.frais_transport_total,
       paie.salaire_net,
@@ -398,32 +394,25 @@ const CalculPaies = () => {
                 <h4 className="text-lg font-semibold text-gray-800 mb-4">Calcul détaillé</h4>
                 
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Salaire de base</span>
-                    <span className="font-semibold text-gray-900">{formatMontant(selectedAgent.salaire_base)}</span>
+                  <div className="bg-blue-50 p-3 rounded-lg mb-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-gray-700 font-medium">Salaire de base</span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {selectedAgent.taux_horaire} DA × {selectedAgent.heures_travaillees}h travaillées
+                        </p>
+                      </div>
+                      <span className="font-semibold text-gray-900">{formatMontant(selectedAgent.salaire_base)}</span>
+                    </div>
                   </div>
                   
-                  {selectedAgent.deduction_absences > 0 && (
-                    <div className="flex justify-between items-center text-red-600">
-                      <span>Déduction absences ({selectedAgent.jours_absence} jour{selectedAgent.jours_absence > 1 ? 's' : ''})</span>
-                      <span className="font-semibold">- {formatMontant(selectedAgent.deduction_absences)}</span>
-                    </div>
-                  )}
-                  
-                  {selectedAgent.deduction_retards > 0 && (
-                    <div className="flex justify-between items-center text-orange-600">
-                      <span>Déduction retards ({selectedAgent.heures_retard}h)</span>
-                      <span className="font-semibold">- {formatMontant(selectedAgent.deduction_retards)}</span>
-                    </div>
-                  )}
-                  
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de panier</span>
+                    <span>Frais de panier ({22 - selectedAgent.jours_absence} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_panier_total)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de transport</span>
+                    <span>Frais de transport ({22 - selectedAgent.jours_absence} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_transport_total)}</span>
                   </div>
                   
