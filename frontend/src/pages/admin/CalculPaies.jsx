@@ -268,10 +268,17 @@ const CalculPaies = () => {
       
       {/* Tableau des paies */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-4">
-            Détails des paies - {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-          </h2>
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-700">
+              Détails des paies - {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
+            </h2>
+            {paies.length > 0 && (
+              <span className="text-sm text-gray-500">
+                {paies.length} agent{paies.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
         
         {isLoading ? (
@@ -283,9 +290,9 @@ const CalculPaies = () => {
             Aucune donnée de paie disponible pour cette période.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Agent

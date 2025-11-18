@@ -194,6 +194,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
             # Absence complète = absent matin ET après-midi
             absence_complete = absent_matin and absent_apres_midi
             
+            print(f"📅 {date_str}: matin_arr={jour_data.get('matin_arrivee')}, matin_sort={jour_data.get('matin_sortie')}, "
+                  f"apm_arr={jour_data.get('apres_midi_arrivee')}, apm_sort={jour_data.get('apres_midi_sortie')}")
+            print(f"   → Absent matin: {absent_matin}, Absent après-midi: {absent_apres_midi}, Absence complète: {absence_complete}")
+            
             if absence_complete:
                 # Absence complète
                 jours_absence += 1
@@ -351,19 +355,29 @@ async def calculer_paies_tous_agents(mois: int, annee: int) -> List[CalculPaie]:
     """
     db = await get_db()
     
-    # Récupérer tous les agents (sauf admin si nécessaire)
+    # Récupérer tous les agents
     agents_response = db.table("agents").select("*").execute()
     
     if not agents_response.data:
         return []
     
+    total_agents = len(agents_response.data)
+    logger.info(f"📊 Total d'agents dans la base: {total_agents}")
+    
     paies = []
+    erreurs = 0
+    
     for agent in agents_response.data:
         try:
             paie = await calculer_paie_agent(agent["id"], mois, annee)
             paies.append(paie)
         except Exception as e:
-            logger.error(f"Erreur lors du calcul de paie pour {agent['nom']}: {str(e)}")
+            erreurs += 1
+            logger.error(f"❌ Erreur lors du calcul de paie pour {agent['nom']} ({agent['role']}): {str(e)}")
+            import traceback
+            traceback.print_exc()
             continue
+    
+    logger.info(f"✅ Paies calculées: {len(paies)}/{total_agents} agents (Erreurs: {erreurs})")
     
     return paies
