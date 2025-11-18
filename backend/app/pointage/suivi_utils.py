@@ -35,6 +35,11 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
         current_date = start_date
         
         while current_date <= end_date:
+            # Absence complète : 8h × 182,18 DA + 200 DA + 500 DA
+            montant_absence_base = round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2)
+            frais_supplementaires = 700  # 200 + 500
+            montant_total = montant_absence_base + frais_supplementaires
+            
             tracking_data.append({
                 "date": current_date.isoformat(),
                 "jour_semaine": current_date.strftime("%A"),
@@ -44,9 +49,14 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
                 "retard_total_minutes": 0,
                 "retard_total_heures": 0,
                 "est_absent": True,
+                "absent_matin": True,
+                "absent_apres_midi": True,
                 "montant_retard": 0,
-                "montant_absence": round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2),
-                "montant_total_deduit": round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2),
+                "montant_absence": montant_total,
+                "montant_absence_matin": round((HEURES_PAR_JOUR / 2) * TAUX_HORAIRE, 2),
+                "montant_absence_apres_midi": round((HEURES_PAR_JOUR / 2) * TAUX_HORAIRE, 2),
+                "frais_absence_complete": frais_supplementaires,
+                "montant_total_deduit": montant_total,
                 "pointages": {
                     "matin_arrivee": None,
                     "matin_sortie": None,
@@ -134,24 +144,31 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
         # Calculer les absences par demi-journée (4h par session)
         heures_par_session = HEURES_PAR_JOUR / 2  # 4 heures
         
-        # Absence matin : pas d'arrivée matin OU pas de sortie matin
-        absent_matin = not (jour_data.get("matin_arrivee") and jour_data.get("matin_sortie"))
+        # Absence matin : AUCUN pointage matin (ni arrivée ni sortie)
+        absent_matin = not (jour_data.get("matin_arrivee") or jour_data.get("matin_sortie"))
         
-        # Absence après-midi : pas d'arrivée après-midi OU pas de sortie après-midi
-        absent_apres_midi = not (jour_data.get("apres_midi_arrivee") and jour_data.get("apres_midi_sortie"))
+        # Absence après-midi : AUCUN pointage après-midi (ni arrivée ni sortie)
+        absent_apres_midi = not (jour_data.get("apres_midi_arrivee") or jour_data.get("apres_midi_sortie"))
         
         # Calculer les montants déduits
+        # Pour les retards : seulement si l'agent est présent (a pointé)
         montant_retard = round(retard_total_heures * TAUX_HORAIRE, 2) if retard_total_minutes > 0 else 0
         
-        # Montant absence : seulement pour les sessions complètement absentes
+        # Montant absence : 182,18 DA × 4h par session absente
         montant_absence_matin = round(heures_par_session * TAUX_HORAIRE, 2) if absent_matin else 0
         montant_absence_apres_midi = round(heures_par_session * TAUX_HORAIRE, 2) if absent_apres_midi else 0
-        montant_absence = montant_absence_matin + montant_absence_apres_midi
-        
-        montant_total_deduit = montant_retard + montant_absence
         
         # Déterminer le statut global
         est_absent = absent_matin and absent_apres_midi
+        
+        # Frais supplémentaires pour absence complète journée
+        frais_absence_complete = 0
+        if est_absent:
+            frais_absence_complete = 200 + 500  # 700 DA de frais supplémentaires
+        
+        montant_absence = montant_absence_matin + montant_absence_apres_midi + frais_absence_complete
+        
+        montant_total_deduit = montant_retard + montant_absence
         
         if est_absent:
             statut = "Absent"
@@ -177,6 +194,7 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
             "montant_absence": montant_absence,
             "montant_absence_matin": montant_absence_matin,
             "montant_absence_apres_midi": montant_absence_apres_midi,
+            "frais_absence_complete": frais_absence_complete,
             "montant_total_deduit": montant_total_deduit,
             "pointages": {
                 "matin_arrivee": jour_data.get("matin_arrivee"),

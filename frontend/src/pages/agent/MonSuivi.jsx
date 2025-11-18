@@ -297,6 +297,11 @@ const MonSuivi = () => {
                                 Absence après-midi: {formatMontant(jour.montant_absence_apres_midi)}
                               </div>
                             )}
+                            {jour.frais_absence_complete > 0 && (
+                              <div className="text-xs text-red-500 font-medium">
+                                Frais absence journée: {formatMontant(jour.frais_absence_complete)}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-green-600 font-medium">Aucune déduction</span>
