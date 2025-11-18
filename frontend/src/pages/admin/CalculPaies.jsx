@@ -472,7 +472,9 @@ const CalculPaies = () => {
                       {selectedAgent.details_absences.map((absence, index) => (
                         <li key={index} className="text-sm text-red-700">
                           <i className="fas fa-calendar-times mr-2"></i>
-                          {new Date(absence.date).toLocaleDateString('fr-FR')} - Absence complète
+                          {new Date(absence.date).toLocaleDateString('fr-FR')} - 
+                          {absence.type === 'absence_complete' ? ' Absence complète' : 
+                           ` Absence partielle (${absence.session === 'matin' ? 'matin' : 'après-midi'})`}
                         </li>
                       ))}
                     </ul>

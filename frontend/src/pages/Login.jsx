@@ -51,7 +51,7 @@ const Login = () => {
       
       {/* Titre */}
       <h2 className="text-3xl font-bold text-center text-collable-teal mb-2">Bon Retour</h2>
-      <p className="text-center text-gray-500 mb-8">Connectez-vous pour à votre espace</p>
+      <p className="text-center text-gray-500 mb-8">Connectez-vous à votre espace</p>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Champ Email */}
@@ -126,7 +126,7 @@ const Login = () => {
       
       {/* Footer */}
       <div className="mt-8 text-center">
-        <p className="text-gray-400 text-sm tracking-widest">OULOULOUUUUUU</p>
+        <p className="text-gray-400 text-sm tracking-widest">OULOULOUUUUUU caca prout</p>
       </div>
     </div>
   )

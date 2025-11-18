@@ -184,12 +184,37 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         if date_str in pointages_par_date:
             jour_data = pointages_par_date[date_str]
             
-            # Vérifier si le jour est complet (au moins arrivée matin et sortie après-midi)
-            if jour_data["matin_arrivee"] and jour_data["apres_midi_sortie"]:
-                jours_travailles += 1
+            # Vérifier les absences par session (même logique que suivi_utils.py)
+            # Absence matin : AUCUN pointage matin (ni arrivée ni sortie)
+            absent_matin = not (jour_data.get("matin_arrivee") or jour_data.get("matin_sortie"))
+            
+            # Absence après-midi : AUCUN pointage après-midi (ni arrivée ni sortie)
+            absent_apres_midi = not (jour_data.get("apres_midi_arrivee") or jour_data.get("apres_midi_sortie"))
+            
+            # Absence complète = absent matin ET après-midi
+            absence_complete = absent_matin and absent_apres_midi
+            
+            if absence_complete:
+                # Absence complète
+                jours_absence += 1
+                details_absences.append({
+                    "date": date_str,
+                    "type": "absence_complete"
+                })
+            elif absent_matin or absent_apres_midi:
+                # Absence partielle
+                jours_absence += 0.5  # Compter comme demi-journée
+                details_absences.append({
+                    "date": date_str,
+                    "type": "absence_partielle",
+                    "session": "matin" if absent_matin else "apres_midi"
+                })
                 
-                # Calculer le retard du matin
-                if jour_data["matin_arrivee"]:
+                # Si présent au moins une session, compter comme jour travaillé
+                jours_travailles += 0.5
+                
+                # Calculer le retard pour la session présente
+                if jour_data.get("matin_arrivee") and not absent_matin:
                     heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
                     retard_minutes = calculer_retard_minutes(heure_arrivee)
                     
@@ -200,15 +225,58 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             "minutes": retard_minutes,
                             "heures": round(retard_minutes / 60.0, 2)
                         })
+                
+                # Calculer le retard après-midi si présent
+                if jour_data.get("apres_midi_arrivee") and not absent_apres_midi:
+                    heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
+                    heure_debut_apres_midi = time(13, 0)
+                    
+                    if heure_arrivee > heure_debut_apres_midi:
+                        delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
+                        retard_minutes = int(delta.total_seconds() / 60)
+                        
+                        if retard_minutes > 0:
+                            heures_retard_total += retard_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": retard_minutes,
+                                "heures": round(retard_minutes / 60.0, 2)
+                            })
             else:
-                # Jour incomplet = absence
-                jours_absence += 1
-                details_absences.append({
-                    "date": date_str,
-                    "type": "absence_complete"
-                })
+                # Présent toute la journée
+                jours_travailles += 1
+                
+                # Calculer le retard du matin
+                if jour_data.get("matin_arrivee"):
+                    heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
+                    retard_minutes = calculer_retard_minutes(heure_arrivee)
+                    
+                    if retard_minutes > 0:
+                        heures_retard_total += retard_minutes / 60.0
+                        details_retards.append({
+                            "date": date_str,
+                            "minutes": retard_minutes,
+                            "heures": round(retard_minutes / 60.0, 2)
+                        })
+                
+                # Calculer le retard après-midi
+                if jour_data.get("apres_midi_arrivee"):
+                    heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
+                    heure_debut_apres_midi = time(13, 0)
+                    
+                    if heure_arrivee > heure_debut_apres_midi:
+                        delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
+                        retard_minutes = int(delta.total_seconds() / 60)
+                        
+                        if retard_minutes > 0:
+                            heures_retard_total += retard_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": retard_minutes,
+                                "heures": round(retard_minutes / 60.0, 2)
+                            })
         else:
-            # Pas de pointage = absence
+            # Pas de pointage = absence complète
             jours_absence += 1
             details_absences.append({
                 "date": date_str,
