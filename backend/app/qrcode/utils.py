@@ -70,15 +70,18 @@ async def create_new_qrcode() -> Dict[str, Any]:
         print("Création d'un nouveau QR code")
         db = await get_db()
         
-        # Désactiver tous les QR codes existants
+        # Désactiver tous les QR codes existants pour des raisons de sécurité
         try:
+            old_qrcodes = db.table("qrcodes").select("*").eq("actif", True).execute()
+            if old_qrcodes.data:
+                print(f"🔒 SÉCURITÉ: Désactivation de {len(old_qrcodes.data)} ancien(s) QR code(s)")
+                for old_qr in old_qrcodes.data:
+                    print(f"   - QR code {old_qr['id']} (créé le {old_qr['date_generation']}) désactivé")
+            
             db.table("qrcodes").update({"actif": False}).eq("actif", True).execute()
-            print("QR codes existants désactivés")
+            print("✅ Tous les anciens QR codes ont été désactivés avec succès")
         except Exception as e:
-            print(f"Erreur lors de la désactivation des QR codes existants: {str(e)}")
-        
-        # Nettoyer les anciens QR codes (optionnel)
-        await nettoyer_anciens_qrcodes()
+            print(f"⚠️ Erreur lors de la désactivation des QR codes existants: {str(e)}")
         
         # Générer un nouveau code unique
         code_unique = str(uuid.uuid4())
@@ -147,16 +150,7 @@ async def get_active_qrcode() -> Dict[str, Any]:
         code_unique = qrcode_db["code_unique"]
         print(f"QR code actif trouvé avec le code: {code_unique}")
         
-        # Vérifier si le QR code actif est encore valide (généré aujourd'hui)
-        date_generation = datetime.fromisoformat(qrcode_db["date_generation"].replace('Z', '+00:00')).astimezone(TIMEZONE)
-        aujourd_hui = datetime.now(TIMEZONE)
-        
-        if date_generation.date() != aujourd_hui.date():
-            print(f"❌ QR code actif expiré (généré le {date_generation.strftime('%Y-%m-%d')}), génération d'un nouveau")
-            # Le QR code est expiré, en créer un nouveau
-            return await create_new_qrcode()
-        
-        # Le QR code est encore valide, générer l'image
+        # Générer l'image du QR code
         image_url, qrcode_data = await generate_qrcode(code_unique)
         
         return {
@@ -183,44 +177,111 @@ async def get_active_qrcode() -> Dict[str, Any]:
 async def validate_qrcode(code_unique: str) -> bool:
     """
     Vérifie si un QR code est valide et actif
-    Un QR code n'est valide QUE le jour de sa génération (mesure de sécurité)
     """
     db = await get_db()
     
+    # Vérifier si le QR code existe et est actif
     result = db.table("qrcodes").select("*").eq("code_unique", code_unique).eq("actif", True).execute()
     
-    if not result.data or len(result.data) == 0:
-        return False
-    
-    qrcode_db = result.data[0]
-    
-    # Vérifier si le QR code a été généré aujourd'hui
-    date_generation = datetime.fromisoformat(qrcode_db["date_generation"].replace('Z', '+00:00')).astimezone(TIMEZONE)
-    aujourd_hui = datetime.now(TIMEZONE)
-    
-    # Le QR code n'est valide que si généré aujourd'hui (même jour)
-    if date_generation.date() == aujourd_hui.date():
-        print(f"✅ QR code valide : généré le {date_generation.strftime('%Y-%m-%d')}, aujourd'hui {aujourd_hui.strftime('%Y-%m-%d')}")
+    if result.data and len(result.data) > 0:
+        qrcode_info = result.data[0]
+        print(f"✅ QR code valide: {qrcode_info['id']} (créé le {qrcode_info['date_generation']})")
         return True
     else:
-        print(f"❌ QR code expiré : généré le {date_generation.strftime('%Y-%m-%d')}, aujourd'hui {aujourd_hui.strftime('%Y-%m-%d')}")
+        # Vérifier si le QR code existe mais est désactivé
+        old_result = db.table("qrcodes").select("*").eq("code_unique", code_unique).execute()
+        if old_result.data and len(old_result.data) > 0:
+            old_qr = old_result.data[0]
+            print(f"🚫 SÉCURITÉ: Tentative d'utilisation d'un QR code désactivé: {old_qr['id']} (créé le {old_qr['date_generation']}, actif: {old_qr['actif']})")
+        else:
+            print(f"🚫 SÉCURITÉ: Tentative d'utilisation d'un QR code inexistant: {code_unique[:8]}...")
         return False
 
 
-async def nettoyer_anciens_qrcodes() -> None:
+async def get_qr_codes_history() -> Dict[str, Any]:
     """
-    Nettoie les QR codes inactifs de plus de 7 jours (optionnel, pour maintenir la base propre)
+    Récupère l'historique de tous les QR codes générés
     """
     try:
+        print("Récupération de l'historique des QR codes")
         db = await get_db()
         
-        # Date limite (7 jours avant aujourd'hui)
-        date_limite = datetime.now(TIMEZONE) - timedelta(days=7)
+        # Récupérer tous les QR codes par ordre décroissant de création
+        result = db.table("qrcodes").select("*").order("date_generation", desc=True).execute()
         
-        # Supprimer les QR codes inactifs de plus de 7 jours
-        result = db.table("qrcodes").delete().lt("date_generation", date_limite.isoformat()).eq("actif", False).execute()
+        if not result.data:
+            return {
+                "total_qrcodes": 0,
+                "active_qrcodes": 0,
+                "inactive_qrcodes": 0,
+                "qrcodes": []
+            }
         
-        if result.data:
-            print(f"🧹 Nettoyage : {len(result.data)} anciens QR codes supprimés")
+        # Compter les QR codes actifs et inactifs
+        active_count = sum(1 for qr in result.data if qr.get("actif", False))
+        inactive_count = len(result.data) - active_count
+        
+        print(f"📊 Historique: {len(result.data)} QR codes au total ({active_count} actifs, {inactive_count} inactifs)")
+        
+        # Formater les données pour l'affichage
+        formatted_qrcodes = []
+        for qr in result.data:
+            formatted_qrcodes.append({
+                "id": qr["id"],
+                "code_unique": qr["code_unique"],
+                "date_generation": qr["date_generation"],
+                "actif": qr.get("actif", False),
+                "status": "Actif" if qr.get("actif", False) else "Désactivé"
+            })
+        
+        return {
+            "total_qrcodes": len(result.data),
+            "active_qrcodes": active_count,
+            "inactive_qrcodes": inactive_count,
+            "qrcodes": formatted_qrcodes
+        }
+        
     except Exception as e:
-        print(f"Erreur lors du nettoyage des anciens QR codes: {str(e)}")
+        print(f"Erreur lors de la récupération de l'historique des QR codes: {str(e)}")
+        return {
+            "total_qrcodes": 0,
+            "active_qrcodes": 0,
+            "inactive_qrcodes": 0,
+            "qrcodes": []
+        }
+
+
+async def cleanup_inactive_qrcodes() -> Dict[str, Any]:
+    """
+    Supprime tous les QR codes inactifs de la base de données
+    """
+    try:
+        print("🧹 Nettoyage des QR codes inactifs")
+        db = await get_db()
+        
+        # Récupérer les QR codes inactifs avant suppression
+        inactive_qrcodes = db.table("qrcodes").select("*").eq("actif", False).execute()
+        
+        if not inactive_qrcodes.data:
+            return {
+                "deleted_count": 0,
+                "message": "Aucun QR code inactif à supprimer"
+            }
+        
+        # Supprimer les QR codes inactifs
+        delete_result = db.table("qrcodes").delete().eq("actif", False).execute()
+        deleted_count = len(delete_result.data) if delete_result.data else 0
+        
+        print(f"🗑️ {deleted_count} QR codes inactifs supprimés avec succès")
+        
+        return {
+            "deleted_count": deleted_count,
+            "message": f"{deleted_count} QR codes inactifs ont été supprimés"
+        }
+        
+    except Exception as e:
+        print(f"Erreur lors du nettoyage des QR codes inactifs: {str(e)}")
+        return {
+            "deleted_count": 0,
+            "message": f"Erreur lors du nettoyage: {str(e)}"
+        }

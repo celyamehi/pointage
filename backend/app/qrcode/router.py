@@ -24,6 +24,38 @@ async def get_active_qr_code(current_user: User = Depends(get_admin_user)):
         )
 
 
+@router.get("/history")
+async def get_qr_codes_history(current_user: User = Depends(get_admin_user)):
+    """
+    Endpoint pour récupérer l'historique de tous les QR codes (admin uniquement)
+    """
+    try:
+        from app.qrcode.utils import get_qr_codes_history
+        history = await get_qr_codes_history()
+        return history
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération de l'historique: {str(e)}"
+        )
+
+
+@router.delete("/cleanup")
+async def cleanup_old_qrcodes(current_user: User = Depends(get_admin_user)):
+    """
+    Endpoint pour supprimer tous les QR codes inactifs (admin uniquement)
+    """
+    try:
+        from app.qrcode.utils import cleanup_inactive_qrcodes
+        result = await cleanup_inactive_qrcodes()
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors du nettoyage: {str(e)}"
+        )
+
+
 @router.post("/generate", response_model=QRCodeResponse)
 async def generate_new_qr_code(current_user: User = Depends(get_admin_user)):
     """
