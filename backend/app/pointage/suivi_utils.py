@@ -71,8 +71,8 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
             }
         
         session = pointage["session"]
-        type_pointage = pointage["type"]
-        heure = pointage["heure"]
+        type_pointage = pointage.get("type_pointage", "arrivee")
+        heure = pointage["heure_pointage"]
         
         if session == "matin":
             if type_pointage == "arrivee":
