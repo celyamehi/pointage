@@ -107,6 +107,13 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         raise ValueError(f"Agent {agent_id} non trouvé")
     
     agent = agent_response.data[0]
+    
+    # Vérifier les champs obligatoires
+    if not agent.get("nom"):
+        raise ValueError(f"Agent {agent_id}: champ 'nom' manquant")
+    if not agent.get("email"):
+        raise ValueError(f"Agent {agent_id}: champ 'email' manquant")
+    
     role = agent.get("role", "agent")
     
     # Récupérer les paramètres de paie pour ce rôle
@@ -373,9 +380,14 @@ async def calculer_paies_tous_agents(mois: int, annee: int) -> List[CalculPaie]:
             paies.append(paie)
         except Exception as e:
             erreurs += 1
-            logger.error(f"❌ Erreur lors du calcul de paie pour {agent['nom']} ({agent['role']}): {str(e)}")
             import traceback
-            traceback.print_exc()
+            error_details = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+            print(f"\n❌ ERREUR lors du calcul de paie pour {agent['nom']} ({agent['role']}, ID: {agent['id']})")
+            print(f"   Type d'erreur: {type(e).__name__}")
+            print(f"   Message: {str(e)}")
+            print(f"   Traceback complet:")
+            print(error_details)
+            print("="*80 + "\n")
             continue
     
     logger.info(f"✅ Paies calculées: {len(paies)}/{total_agents} agents (Erreurs: {erreurs})")
