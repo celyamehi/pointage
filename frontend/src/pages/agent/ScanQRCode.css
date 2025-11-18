@@ -1,0 +1,31 @@
+/* Masquer l'option d'upload de fichier dans le scanner QR code */
+#qr-reader__dashboard_section_swaplink,
+#qr-reader__dashboard_section_fsr,
+#html5-qrcode-button-file-selection {
+  display: none !important;
+}
+
+/* Masquer le texte "Powered by ScanApp" et les liens associés */
+#qr-reader__dashboard_section_csr > span:last-child,
+#qr-reader__scan_region > div:last-child {
+  display: none !important;
+}
+
+/* Améliorer l'apparence du scanner */
+#qr-reader {
+  border: none !important;
+}
+
+#qr-reader__dashboard_section {
+  padding: 0 !important;
+}
+
+#qr-reader__camera_selection {
+  margin-bottom: 1rem;
+}
+
+/* Centrer le bouton de démarrage */
+#qr-reader__dashboard_section_csr > button {
+  margin: 0 auto;
+  display: block;
+}

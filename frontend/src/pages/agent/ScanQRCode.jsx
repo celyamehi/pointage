@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
+import './ScanQRCode.css'
 
 const ScanQRCode = () => {
   const { user } = useAuth()
