@@ -20,6 +20,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import GestionAgents from './pages/admin/GestionAgents'
 import GestionQRCode from './pages/admin/GestionQRCode'
 import PointagesDetailles from './pages/admin/PointagesDetailles'
+import CalculPaies from './pages/admin/CalculPaies'
 
 // Route protégée pour les utilisateurs authentifiés
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -79,6 +80,7 @@ function App() {
         <Route path="qrcode" element={<GestionQRCode />} />
         <Route path="pointages" element={<Navigate to="/admin/pointages-detailles" replace />} />
         <Route path="pointages-detailles" element={<PointagesDetailles />} />
+        <Route path="paies" element={<CalculPaies />} />
       </Route>
       
       {/* Redirection par défaut */}

@@ -87,7 +87,15 @@ const MonProfil = () => {
           
           <div>
             <p className="text-sm text-gray-500 mb-1">Rôle</p>
-            <p className="font-medium">{user?.role === 'admin' ? 'Administrateur' : 'Agent'}</p>
+            <p className="font-medium">
+              {user?.role === 'admin' ? 'Administrateur' :
+               user?.role === 'informaticien' ? 'Informaticien' :
+               user?.role === 'analyste_informaticienne' ? 'Analyste informaticienne' :
+               user?.role === 'superviseur' ? 'Superviseur' :
+               user?.role === 'agent_administratif' ? 'Agent administratif' :
+               user?.role === 'charge_administration' ? 'Chargé de l\'administration' :
+               'Agent'}
+            </p>
           </div>
         </div>
         

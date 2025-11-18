@@ -1,0 +1,279 @@
+from datetime import datetime, date, time, timedelta, timezone
+from typing import Dict, Any, List
+import calendar
+import logging
+
+from app.db import get_db
+from app.paie.models import ParametresPaie, CalculPaie
+
+logger = logging.getLogger(__name__)
+
+# Fuseau horaire GMT+1
+TIMEZONE = timezone(timedelta(hours=1))
+
+# Paramètres de paie par rôle
+PARAMETRES_PAIE_PAR_ROLE = {
+    "agent": ParametresPaie(
+        role="agent",
+        taux_horaire=182.18,
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "admin": ParametresPaie(
+        role="admin",
+        taux_horaire=250.0,  # À ajuster selon vos besoins
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "informaticien": ParametresPaie(
+        role="informaticien",
+        taux_horaire=250.0,  # À ajuster
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "analyste_informaticienne": ParametresPaie(
+        role="analyste_informaticienne",
+        taux_horaire=230.0,  # À ajuster
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "superviseur": ParametresPaie(
+        role="superviseur",
+        taux_horaire=220.0,  # À ajuster
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "agent_administratif": ParametresPaie(
+        role="agent_administratif",
+        taux_horaire=200.0,  # À ajuster
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    ),
+    "charge_administration": ParametresPaie(
+        role="charge_administration",
+        taux_horaire=210.0,  # À ajuster
+        heures_par_jour=8,
+        heures_par_mois=174,
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0
+    )
+}
+
+
+def calculer_retard_minutes(heure_arrivee: time, heure_debut_theorique: time = time(8, 0)) -> int:
+    """
+    Calcule le retard en minutes
+    """
+    if heure_arrivee <= heure_debut_theorique:
+        return 0
+    
+    # Convertir en minutes depuis minuit
+    minutes_arrivee = heure_arrivee.hour * 60 + heure_arrivee.minute
+    minutes_debut = heure_debut_theorique.hour * 60 + heure_debut_theorique.minute
+    
+    retard = minutes_arrivee - minutes_debut
+    return max(0, retard)
+
+
+async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPaie:
+    """
+    Calcule la paie d'un agent pour un mois donné
+    """
+    db = await get_db()
+    
+    # Récupérer les informations de l'agent
+    agent_response = db.table("agents").select("*").eq("id", agent_id).execute()
+    
+    if not agent_response.data or len(agent_response.data) == 0:
+        raise ValueError(f"Agent {agent_id} non trouvé")
+    
+    agent = agent_response.data[0]
+    role = agent.get("role", "agent")
+    
+    # Récupérer les paramètres de paie pour ce rôle
+    params = PARAMETRES_PAIE_PAR_ROLE.get(role, PARAMETRES_PAIE_PAR_ROLE["agent"])
+    
+    # Calculer les dates de début et fin du mois
+    premier_jour = date(annee, mois, 1)
+    dernier_jour = date(annee, mois, calendar.monthrange(annee, mois)[1])
+    
+    logger.info(f"Calcul de paie pour {agent['nom']} ({role}) - {mois}/{annee}")
+    
+    # Récupérer tous les pointages du mois
+    pointages_response = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", premier_jour.isoformat()).lte("date_pointage", dernier_jour.isoformat()).order("date_pointage").execute()
+    
+    pointages = pointages_response.data if pointages_response.data else []
+    
+    # Organiser les pointages par date
+    pointages_par_date = {}
+    for pointage in pointages:
+        date_p = pointage["date_pointage"]
+        if date_p not in pointages_par_date:
+            pointages_par_date[date_p] = {
+                "matin_arrivee": None,
+                "matin_sortie": None,
+                "apres_midi_arrivee": None,
+                "apres_midi_sortie": None
+            }
+        
+        session = pointage["session"]
+        type_p = pointage.get("type_pointage", "arrivee")
+        heure = pointage["heure_pointage"]
+        
+        if session == "matin":
+            if type_p == "arrivee":
+                pointages_par_date[date_p]["matin_arrivee"] = heure
+            else:
+                pointages_par_date[date_p]["matin_sortie"] = heure
+        else:
+            if type_p == "arrivee":
+                pointages_par_date[date_p]["apres_midi_arrivee"] = heure
+            else:
+                pointages_par_date[date_p]["apres_midi_sortie"] = heure
+    
+    # Calculer les jours ouvrés du mois (exclure samedi et dimanche)
+    jours_ouvres = 0
+    current_date = premier_jour
+    while current_date <= dernier_jour:
+        if current_date.weekday() < 5:  # Lundi=0, Vendredi=4
+            jours_ouvres += 1
+        current_date += timedelta(days=1)
+    
+    # Analyser les absences et retards
+    jours_travailles = 0
+    jours_absence = 0
+    heures_retard_total = 0.0
+    details_absences = []
+    details_retards = []
+    
+    current_date = premier_jour
+    while current_date <= dernier_jour:
+        # Ne compter que les jours ouvrés
+        if current_date.weekday() >= 5:  # Samedi ou dimanche
+            current_date += timedelta(days=1)
+            continue
+        
+        date_str = current_date.isoformat()
+        
+        if date_str in pointages_par_date:
+            jour_data = pointages_par_date[date_str]
+            
+            # Vérifier si le jour est complet (au moins arrivée matin et sortie après-midi)
+            if jour_data["matin_arrivee"] and jour_data["apres_midi_sortie"]:
+                jours_travailles += 1
+                
+                # Calculer le retard du matin
+                if jour_data["matin_arrivee"]:
+                    heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
+                    retard_minutes = calculer_retard_minutes(heure_arrivee)
+                    
+                    if retard_minutes > 0:
+                        heures_retard_total += retard_minutes / 60.0
+                        details_retards.append({
+                            "date": date_str,
+                            "minutes": retard_minutes,
+                            "heures": round(retard_minutes / 60.0, 2)
+                        })
+            else:
+                # Jour incomplet = absence
+                jours_absence += 1
+                details_absences.append({
+                    "date": date_str,
+                    "type": "absence_complete"
+                })
+        else:
+            # Pas de pointage = absence
+            jours_absence += 1
+            details_absences.append({
+                "date": date_str,
+                "type": "absence_complete"
+            })
+        
+        current_date += timedelta(days=1)
+    
+    # Calculs financiers
+    heures_theoriques = params.heures_par_mois
+    heures_absence = jours_absence * params.heures_par_jour
+    heures_travaillees = heures_theoriques - heures_absence - heures_retard_total
+    
+    # Salaire de base
+    salaire_base = params.taux_horaire * heures_theoriques
+    
+    # Déductions
+    deduction_absences = jours_absence * (params.heures_par_jour * params.taux_horaire + params.frais_panier + params.frais_transport)
+    deduction_retards = heures_retard_total * params.taux_horaire
+    
+    # Frais (réduits selon les absences)
+    jours_panier = params.jours_travail_mois - jours_absence
+    jours_transport = params.jours_travail_mois - jours_absence
+    frais_panier_total = jours_panier * params.frais_panier
+    frais_transport_total = jours_transport * params.frais_transport
+    
+    # Salaire net
+    salaire_net = salaire_base - deduction_absences - deduction_retards + frais_panier_total + frais_transport_total
+    
+    return CalculPaie(
+        agent_id=agent_id,
+        nom=agent["nom"],
+        email=agent["email"],
+        role=role,
+        mois=f"{annee}-{mois:02d}",
+        heures_travaillees=round(heures_travaillees, 2),
+        heures_theoriques=heures_theoriques,
+        heures_absence=heures_absence,
+        heures_retard=round(heures_retard_total, 2),
+        jours_travailles=jours_travailles,
+        jours_absence=jours_absence,
+        salaire_base=round(salaire_base, 2),
+        deduction_absences=round(deduction_absences, 2),
+        deduction_retards=round(deduction_retards, 2),
+        frais_panier_total=round(frais_panier_total, 2),
+        frais_transport_total=round(frais_transport_total, 2),
+        salaire_net=round(salaire_net, 2),
+        taux_horaire=params.taux_horaire,
+        details_absences=details_absences,
+        details_retards=details_retards
+    )
+
+
+async def calculer_paies_tous_agents(mois: int, annee: int) -> List[CalculPaie]:
+    """
+    Calcule les paies de tous les agents pour un mois donné
+    """
+    db = await get_db()
+    
+    # Récupérer tous les agents (sauf admin si nécessaire)
+    agents_response = db.table("agents").select("*").execute()
+    
+    if not agents_response.data:
+        return []
+    
+    paies = []
+    for agent in agents_response.data:
+        try:
+            paie = await calculer_paie_agent(agent["id"], mois, annee)
+            paies.append(paie)
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul de paie pour {agent['nom']}: {str(e)}")
+            continue
+    
+    return paies

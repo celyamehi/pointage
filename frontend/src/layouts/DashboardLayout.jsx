@@ -26,6 +26,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'Gestion des Agents', to: '/admin/agents', icon: 'users' },
     { name: 'QR Code', to: '/admin/qrcode', icon: 'qrcode' },
     { name: 'Pointages', to: '/admin/pointages-detailles', icon: 'list' },
+    { name: 'Calcul des Paies', to: '/admin/paies', icon: 'money-bill-wave' },
   ]
   
   const navigation = isAdmin ? adminNavigation : agentNavigation
@@ -65,7 +66,15 @@ const DashboardLayout = ({ isAdmin = false }) => {
               <div className="flex items-center">
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-700">{user?.nom}</p>
-                  <p className="text-xs font-medium text-gray-500">{user?.role === 'admin' ? 'Administrateur' : 'Agent'}</p>
+                  <p className="text-xs font-medium text-gray-500">
+                    {user?.role === 'admin' ? 'Administrateur' :
+                     user?.role === 'informaticien' ? 'Informaticien' :
+                     user?.role === 'analyste_informaticienne' ? 'Analyste informaticienne' :
+                     user?.role === 'superviseur' ? 'Superviseur' :
+                     user?.role === 'agent_administratif' ? 'Agent administratif' :
+                     user?.role === 'charge_administration' ? 'Chargé de l\'administration' :
+                     'Agent'}
+                  </p>
                 </div>
               </div>
               <button
@@ -98,7 +107,13 @@ const DashboardLayout = ({ isAdmin = false }) => {
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-primary-600">Collable</h1>
               <span className="hidden md:inline-block text-sm text-gray-500">
-                {user?.role === 'admin' ? '👑 Administrateur' : '👤 Agent'}
+                {user?.role === 'admin' ? '👑 Administrateur' :
+                 user?.role === 'informaticien' ? '💻 Informaticien' :
+                 user?.role === 'analyste_informaticienne' ? '📊 Analyste informaticienne' :
+                 user?.role === 'superviseur' ? '👨‍💼 Superviseur' :
+                 user?.role === 'agent_administratif' ? '📋 Agent administratif' :
+                 user?.role === 'charge_administration' ? '🏢 Chargé de l\'administration' :
+                 '👤 Agent'}
               </span>
             </div>
             <button
@@ -150,7 +165,13 @@ const DashboardLayout = ({ isAdmin = false }) => {
                     <div className="text-base font-medium text-gray-800">{user?.nom}</div>
                     <div className="text-sm font-medium text-gray-500">{user?.email}</div>
                     <div className="text-xs font-medium text-gray-400 mt-1">
-                      {user?.role === 'admin' ? '👑 Administrateur' : '👤 Agent'}
+                      {user?.role === 'admin' ? '👑 Administrateur' :
+                       user?.role === 'informaticien' ? '💻 Informaticien' :
+                       user?.role === 'analyste_informaticienne' ? '📊 Analyste informaticienne' :
+                       user?.role === 'superviseur' ? '👨‍💼 Superviseur' :
+                       user?.role === 'agent_administratif' ? '📋 Agent administratif' :
+                       user?.role === 'charge_administration' ? '🏢 Chargé de l\'administration' :
+                       '👤 Agent'}
                     </div>
                   </div>
                 </div>

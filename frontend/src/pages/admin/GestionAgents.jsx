@@ -222,6 +222,26 @@ const GestionAgents = () => {
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                           Administrateur
                         </span>
+                      ) : agent.role === 'informaticien' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Informaticien
+                        </span>
+                      ) : agent.role === 'analyste_informaticienne' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                          Analyste informaticienne
+                        </span>
+                      ) : agent.role === 'superviseur' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          Superviseur
+                        </span>
+                      ) : agent.role === 'agent_administratif' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                          Agent administratif
+                        </span>
+                      ) : agent.role === 'charge_administration' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                          Chargé de l'administration
+                        </span>
                       ) : (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                           Agent
@@ -318,6 +338,11 @@ const GestionAgents = () => {
                   >
                     <option value="agent">Agent</option>
                     <option value="admin">Administrateur</option>
+                    <option value="informaticien">Informaticien</option>
+                    <option value="analyste_informaticienne">Analyste informaticienne</option>
+                    <option value="superviseur">Superviseur</option>
+                    <option value="agent_administratif">Agent administratif</option>
+                    <option value="charge_administration">Chargé de l'administration</option>
                   </select>
                 </div>
                 
@@ -409,6 +434,11 @@ const GestionAgents = () => {
                   >
                     <option value="agent">Agent</option>
                     <option value="admin">Administrateur</option>
+                    <option value="informaticien">Informaticien</option>
+                    <option value="analyste_informaticienne">Analyste informaticienne</option>
+                    <option value="superviseur">Superviseur</option>
+                    <option value="agent_administratif">Agent administratif</option>
+                    <option value="charge_administration">Chargé de l'administration</option>
                   </select>
                 </div>
                 
