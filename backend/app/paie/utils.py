@@ -114,9 +114,16 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     
     # Calculer les dates de début et fin du mois
     premier_jour = date(annee, mois, 1)
-    dernier_jour = date(annee, mois, calendar.monthrange(annee, mois)[1])
+    dernier_jour_mois = date(annee, mois, calendar.monthrange(annee, mois)[1])
     
-    logger.info(f"Calcul de paie pour {agent['nom']} ({role}) - {mois}/{annee}")
+    # Limiter au jour actuel si on est dans le mois en cours
+    aujourd_hui = date.today()
+    if annee == aujourd_hui.year and mois == aujourd_hui.month:
+        dernier_jour = aujourd_hui
+    else:
+        dernier_jour = dernier_jour_mois
+    
+    logger.info(f"Calcul de paie pour {agent['nom']} ({role}) - {mois}/{annee} (jusqu'au {dernier_jour})")
     
     # Récupérer tous les pointages du mois
     pointages_response = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", premier_jour.isoformat()).lte("date_pointage", dernier_jour.isoformat()).order("date_pointage").execute()
@@ -213,15 +220,17 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     # Calculs financiers
     heures_theoriques = params.heures_par_mois
     heures_absence = jours_absence * params.heures_par_jour
-    heures_travaillees = heures_theoriques - heures_absence - heures_retard_total
+    
+    # Heures travaillées = jours réellement travaillés × 8h - retards
+    heures_travaillees = (jours_travailles * params.heures_par_jour) - heures_retard_total
     
     # Salaire de base = Taux horaire × Heures travaillées (et non heures théoriques)
     # Les absences et retards sont déjà pris en compte dans le calcul des heures travaillées
     salaire_base = params.taux_horaire * heures_travaillees
     
-    # Frais calculés selon les jours réellement travaillés
-    jours_panier = params.jours_travail_mois - jours_absence
-    jours_transport = params.jours_travail_mois - jours_absence
+    # Frais calculés selon les jours réellement travaillés (avec pointages complets)
+    jours_panier = jours_travailles
+    jours_transport = jours_travailles
     frais_panier_total = jours_panier * params.frais_panier
     frais_transport_total = jours_transport * params.frais_transport
     

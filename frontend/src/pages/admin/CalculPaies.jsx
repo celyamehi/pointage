@@ -407,12 +407,12 @@ const CalculPaies = () => {
                   </div>
                   
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de panier ({22 - selectedAgent.jours_absence} jours)</span>
+                    <span>Frais de panier ({selectedAgent.jours_travailles} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_panier_total)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de transport ({22 - selectedAgent.jours_absence} jours)</span>
+                    <span>Frais de transport ({selectedAgent.jours_travailles} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_transport_total)}</span>
                   </div>
                   
