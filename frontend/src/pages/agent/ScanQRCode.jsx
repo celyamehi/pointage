@@ -20,7 +20,7 @@ const ScanQRCode = () => {
     
     if (!scanResult && !isSubmitting) {
       try {
-        // Configuration du scanner
+        // Configuration du scanner (caméra uniquement, pas d'upload)
         html5QrcodeScanner = new Html5QrcodeScanner(
           "qr-reader",
           { 
@@ -28,7 +28,8 @@ const ScanQRCode = () => {
             qrbox: 250,
             rememberLastUsedCamera: true,
             showTorchButtonIfSupported: true,
-            aspectRatio: 1.0
+            aspectRatio: 1.0,
+            supportedScanTypes: [0] // 0 = caméra uniquement, pas d'upload de fichier
           },
           /* verbose= */ false);
         

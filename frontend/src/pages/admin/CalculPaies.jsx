@@ -300,7 +300,7 @@ const CalculPaies = () => {
                     Absences
                   </th>
                   <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Retards (h)
+                    Retards (min)
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Paie finale
@@ -335,7 +335,7 @@ const CalculPaies = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {paie.heures_retard > 0 ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          {formatRetard(paie.heures_retard).display}
+                          {formatRetard(paie.heures_retard).minutes} min
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
