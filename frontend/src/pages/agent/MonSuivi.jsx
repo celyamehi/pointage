@@ -8,13 +8,13 @@ const MonSuivi = () => {
   const [loading, setLoading] = useState(false)
   const [suiviData, setSuiviData] = useState(null)
   
-  // Dates par défaut : mois en cours
+  // Dates par défaut : mois en cours jusqu'à aujourd'hui
   const today = new Date()
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  // Utiliser aujourd'hui comme date de fin par défaut (pas la fin du mois)
   
   const [startDate, setStartDate] = useState(firstDayOfMonth.toISOString().split('T')[0])
-  const [endDate, setEndDate] = useState(lastDayOfMonth.toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0])
   
   const fetchSuivi = async () => {
     setLoading(true)
@@ -28,7 +28,8 @@ const MonSuivi = () => {
       setSuiviData(response.data)
     } catch (error) {
       console.error('Erreur lors de la récupération du suivi:', error)
-      toast.error('Erreur lors de la récupération du suivi')
+      const errorMessage = error.response?.data?.detail || error.message || 'Erreur lors de la récupération du suivi'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -40,6 +41,25 @@ const MonSuivi = () => {
   
   const handleFilter = (e) => {
     e.preventDefault()
+    
+    // Validation : la date de début ne peut pas être après la date de fin
+    if (new Date(startDate) > new Date(endDate)) {
+      toast.error('La date de début doit être avant la date de fin')
+      return
+    }
+    
+    // Validation : la date de fin ne peut pas être dans le futur
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selectedEndDate = new Date(endDate)
+    selectedEndDate.setHours(0, 0, 0, 0)
+    
+    if (selectedEndDate > today) {
+      toast.warning('La date de fin a été ajustée à aujourd\'hui')
+      setEndDate(today.toISOString().split('T')[0])
+      return
+    }
+    
     fetchSuivi()
   }
   
@@ -84,6 +104,7 @@ const MonSuivi = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             />
@@ -96,6 +117,7 @@ const MonSuivi = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             />
