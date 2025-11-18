@@ -103,7 +103,12 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
         retard_apres_midi_minutes = 0
         
         if jour_data.get("matin_arrivee"):
-            heure_arrivee = datetime.fromisoformat(jour_data["matin_arrivee"]).time()
+            # Parser l'heure au format HH:MM:SS
+            heure_str = jour_data["matin_arrivee"]
+            if isinstance(heure_str, str):
+                heure_arrivee = datetime.strptime(heure_str, "%H:%M:%S").time()
+            else:
+                heure_arrivee = heure_str
             heure_debut_matin = time(8, 0)
             
             if heure_arrivee > heure_debut_matin:
@@ -111,7 +116,12 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
                 retard_matin_minutes = int(delta.total_seconds() / 60)
         
         if jour_data.get("apres_midi_arrivee"):
-            heure_arrivee = datetime.fromisoformat(jour_data["apres_midi_arrivee"]).time()
+            # Parser l'heure au format HH:MM:SS
+            heure_str = jour_data["apres_midi_arrivee"]
+            if isinstance(heure_str, str):
+                heure_arrivee = datetime.strptime(heure_str, "%H:%M:%S").time()
+            else:
+                heure_arrivee = heure_str
             heure_debut_apres_midi = time(13, 0)
             
             if heure_arrivee > heure_debut_apres_midi:
