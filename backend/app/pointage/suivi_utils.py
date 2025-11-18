@@ -17,11 +17,46 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     """
     db = await get_db()
     
-    # Récupérer tous les pointages de l'agent pour la période
-    result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date", start_date.isoformat()).lte("date", end_date.isoformat()).order("date").execute()
+    try:
+        # Récupérer tous les pointages de l'agent pour la période
+        print(f"📊 Récupération des pointages pour agent {agent_id} du {start_date} au {end_date}")
+        result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date", start_date.isoformat()).lte("date", end_date.isoformat()).execute()
+        
+        print(f"✅ {len(result.data) if result.data else 0} pointages récupérés")
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des pointages: {str(e)}")
+        # Retourner une liste vide en cas d'erreur pour éviter de bloquer
+        result = type('obj', (object,), {'data': None})()
     
     if not result.data:
-        return []
+        print("ℹ️ Aucun pointage trouvé pour cette période")
+        # Retourner quand même les jours avec statut "Absent"
+        tracking_data = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            tracking_data.append({
+                "date": current_date.isoformat(),
+                "jour_semaine": current_date.strftime("%A"),
+                "statut": "Absent",
+                "retard_matin_minutes": 0,
+                "retard_apres_midi_minutes": 0,
+                "retard_total_minutes": 0,
+                "retard_total_heures": 0,
+                "est_absent": True,
+                "montant_retard": 0,
+                "montant_absence": round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2),
+                "montant_total_deduit": round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2),
+                "pointages": {
+                    "matin_arrivee": None,
+                    "matin_sortie": None,
+                    "apres_midi_arrivee": None,
+                    "apres_midi_sortie": None
+                }
+            })
+            current_date += timedelta(days=1)
+        
+        return tracking_data
     
     # Organiser les pointages par date
     pointages_par_date = {}

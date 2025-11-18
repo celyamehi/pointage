@@ -79,12 +79,15 @@ async def mon_suivi_quotidien(
     avec les montants déduits pour chaque jour
     """
     try:
+        print(f"🔍 Suivi demandé pour {current_user.nom} ({current_user.id}) du {start_date} au {end_date}")
         tracking = await get_agent_daily_tracking(str(current_user.id), start_date, end_date)
         
         # Calculer les totaux
         total_retard_minutes = sum(day["retard_total_minutes"] for day in tracking)
         total_absences = sum(1 for day in tracking if day["est_absent"])
         total_montant_deduit = sum(day["montant_total_deduit"] for day in tracking)
+        
+        print(f"✅ Suivi calculé: {len(tracking)} jours, {total_absences} absences, {total_retard_minutes} min de retard")
         
         return {
             "agent_id": str(current_user.id),
@@ -102,6 +105,9 @@ async def mon_suivi_quotidien(
             "details_quotidiens": tracking
         }
     except Exception as e:
+        print(f"❌ Erreur dans mon_suivi_quotidien: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération du suivi: {str(e)}"
