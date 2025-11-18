@@ -18,7 +18,7 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     db = await get_db()
     
     # Récupérer tous les pointages de l'agent pour la période
-    result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date", start_date.isoformat()).lte("date", end_date.isoformat()).order("date", desc=False).execute()
+    result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date", start_date.isoformat()).lte("date", end_date.isoformat()).order("date").execute()
     
     if not result.data:
         return []
