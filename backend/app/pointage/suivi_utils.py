@@ -20,7 +20,7 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     try:
         # Récupérer tous les pointages de l'agent pour la période
         print(f"📊 Récupération des pointages pour agent {agent_id} du {start_date} au {end_date}")
-        result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date", start_date.isoformat()).lte("date", end_date.isoformat()).execute()
+        result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", start_date.isoformat()).lte("date_pointage", end_date.isoformat()).execute()
         
         print(f"✅ {len(result.data) if result.data else 0} pointages récupérés")
     except Exception as e:
@@ -61,7 +61,7 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     # Organiser les pointages par date
     pointages_par_date = {}
     for pointage in result.data:
-        date_pointage = pointage["date"]
+        date_pointage = pointage["date_pointage"]
         if date_pointage not in pointages_par_date:
             pointages_par_date[date_pointage] = {
                 "matin_arrivee": None,
