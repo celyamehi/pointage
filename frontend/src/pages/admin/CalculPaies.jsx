@@ -85,8 +85,8 @@ const CalculPaies = () => {
     setShowDetailsModal(true)
   }
   
-  // Calculer le total des salaires
-  const totalSalaires = paies.reduce((sum, paie) => sum + paie.salaire_net, 0)
+  // Calculer le total des paies finales
+  const totalPaies = paies.reduce((sum, paie) => sum + paie.paie_finale, 0)
   
   // Exporter en CSV
   const exportToCSV = () => {
@@ -104,7 +104,11 @@ const CalculPaies = () => {
       'Déduction retards',
       'Frais panier',
       'Frais transport',
-      'Salaire net'
+      'Salaire net',
+      'Retenues 9%',
+      'Retenues fixes',
+      'Retenues total',
+      'Paie finale'
     ]
     
     const rows = paies.map(paie => [
@@ -121,7 +125,11 @@ const CalculPaies = () => {
       paie.deduction_retards,
       paie.frais_panier_total,
       paie.frais_transport_total,
-      paie.salaire_net
+      paie.salaire_net,
+      paie.retenues_9_pourcent,
+      paie.retenues_fixes,
+      paie.retenues_total,
+      paie.paie_finale
     ])
     
     const csvContent = [
@@ -230,8 +238,8 @@ const CalculPaies = () => {
                 <i className="fas fa-money-bill-wave text-green-600 text-2xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total des salaires</p>
-                <p className="text-2xl font-semibold text-gray-900">{formatMontant(totalSalaires)}</p>
+                <p className="text-sm font-medium text-gray-500">Total des paies</p>
+                <p className="text-2xl font-semibold text-gray-900">{formatMontant(totalPaies)}</p>
               </div>
             </div>
           </div>
@@ -242,9 +250,9 @@ const CalculPaies = () => {
                 <i className="fas fa-calculator text-yellow-600 text-2xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Salaire moyen</p>
+                <p className="text-sm font-medium text-gray-500">Paie moyenne</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {formatMontant(totalSalaires / paies.length)}
+                  {formatMontant(totalPaies / paies.length)}
                 </p>
               </div>
             </div>
@@ -289,7 +297,7 @@ const CalculPaies = () => {
                     Retards (h)
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Salaire net
+                    Paie finale
                   </th>
                   <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -328,7 +336,7 @@ const CalculPaies = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600">
-                      {formatMontant(paie.salaire_net)}
+                      {formatMontant(paie.paie_finale)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <button
@@ -422,7 +430,29 @@ const CalculPaies = () => {
                   <div className="border-t-2 border-gray-300 pt-3 mt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Salaire net</span>
-                      <span className="text-xl font-bold text-green-600">{formatMontant(selectedAgent.salaire_net)}</span>
+                      <span className="text-xl font-bold text-gray-900">{formatMontant(selectedAgent.salaire_net)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-orange-50 p-3 rounded-lg mt-3">
+                    <div className="flex justify-between items-center text-orange-700 mb-2">
+                      <span>Retenues 9% du salaire de base</span>
+                      <span className="font-semibold">- {formatMontant(selectedAgent.retenues_9_pourcent)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-orange-700">
+                      <span>Retenues fixes</span>
+                      <span className="font-semibold">- {formatMontant(selectedAgent.retenues_fixes)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-orange-800 font-semibold mt-2 pt-2 border-t border-orange-200">
+                      <span>Total retenues</span>
+                      <span>- {formatMontant(selectedAgent.retenues_total)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t-2 border-green-500 pt-3 mt-3 bg-green-50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xl font-bold text-green-800">Paie finale</span>
+                      <span className="text-2xl font-bold text-green-600">{formatMontant(selectedAgent.paie_finale)}</span>
                     </div>
                   </div>
                 </div>

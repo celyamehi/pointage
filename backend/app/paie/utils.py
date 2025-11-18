@@ -231,6 +231,14 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     # Salaire net
     salaire_net = salaire_base - deduction_absences - deduction_retards + frais_panier_total + frais_transport_total
     
+    # Retenues
+    retenues_9_pourcent = salaire_base * 0.09  # 9% du salaire de base
+    retenues_fixes = 4244.80  # Montant fixe
+    retenues_total = retenues_9_pourcent + retenues_fixes
+    
+    # Paie finale
+    paie_finale = salaire_net - retenues_total
+    
     return CalculPaie(
         agent_id=agent_id,
         nom=agent["nom"],
@@ -249,6 +257,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         frais_panier_total=round(frais_panier_total, 2),
         frais_transport_total=round(frais_transport_total, 2),
         salaire_net=round(salaire_net, 2),
+        retenues_9_pourcent=round(retenues_9_pourcent, 2),
+        retenues_fixes=round(retenues_fixes, 2),
+        retenues_total=round(retenues_total, 2),
+        paie_finale=round(paie_finale, 2),
         taux_horaire=params.taux_horaire,
         details_absences=details_absences,
         details_retards=details_retards
