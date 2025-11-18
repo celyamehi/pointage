@@ -215,12 +215,12 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     heures_absence = jours_absence * params.heures_par_jour
     heures_travaillees = heures_theoriques - heures_absence - heures_retard_total
     
-    # Salaire de base
-    salaire_base = params.taux_horaire * heures_theoriques
+    # Salaire de base = Taux horaire × Heures travaillées (et non heures théoriques)
+    salaire_base = params.taux_horaire * heures_travaillees
     
-    # Déductions
-    deduction_absences = jours_absence * (params.heures_par_jour * params.taux_horaire + params.frais_panier + params.frais_transport)
-    deduction_retards = heures_retard_total * params.taux_horaire
+    # Déductions pour les frais uniquement (le salaire est déjà calculé sur heures travaillées)
+    deduction_absences = jours_absence * (params.frais_panier + params.frais_transport)
+    deduction_retards = 0  # Les retards sont déjà pris en compte dans heures_travaillees
     
     # Frais (réduits selon les absences)
     jours_panier = params.jours_travail_mois - jours_absence
@@ -229,9 +229,9 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     frais_transport_total = jours_transport * params.frais_transport
     
     # Salaire net
-    salaire_net = salaire_base - deduction_absences - deduction_retards + frais_panier_total + frais_transport_total
+    salaire_net = salaire_base - deduction_absences + frais_panier_total + frais_transport_total
     
-    # Retenues
+    # Retenues calculées sur le salaire de base (heures travaillées × taux horaire)
     retenues_9_pourcent = salaire_base * 0.09  # 9% du salaire de base
     retenues_fixes = 4244.80  # Montant fixe
     retenues_total = retenues_9_pourcent + retenues_fixes
