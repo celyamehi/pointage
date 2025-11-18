@@ -14,6 +14,7 @@ import AgentDashboard from './pages/agent/Dashboard'
 import ScanQRCode from './pages/agent/ScanQRCode'
 import MesPointages from './pages/agent/MesPointages'
 import MonProfil from './pages/agent/MonProfil'
+import MonSuivi from './pages/agent/MonSuivi'
 
 // Pages admin
 import AdminDashboard from './pages/admin/Dashboard'
@@ -66,6 +67,7 @@ function App() {
         <Route index element={<AgentDashboard />} />
         <Route path="scan" element={<ScanQRCode />} />
         <Route path="pointages" element={<MesPointages />} />
+        <Route path="suivi" element={<MonSuivi />} />
         <Route path="profil" element={<MonProfil />} />
       </Route>
       

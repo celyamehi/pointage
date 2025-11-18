@@ -6,6 +6,7 @@ from app.auth.utils import get_current_active_user
 from app.auth.models import User
 from app.pointage.models import PointageCreate, PointageResponse, PointageJour
 from app.pointage.utils import create_pointage, format_pointages_by_date
+from app.pointage.suivi_utils import get_agent_daily_tracking
 
 router = APIRouter()
 
@@ -64,4 +65,44 @@ async def mes_pointages(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération des pointages: {str(e)}"
+        )
+
+
+@router.get("/me/suivi")
+async def mon_suivi_quotidien(
+    start_date: date = Query(..., description="Date de début"),
+    end_date: date = Query(..., description="Date de fin"),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Endpoint pour récupérer le suivi quotidien des retards et absences
+    avec les montants déduits pour chaque jour
+    """
+    try:
+        tracking = await get_agent_daily_tracking(str(current_user.id), start_date, end_date)
+        
+        # Calculer les totaux
+        total_retard_minutes = sum(day["retard_total_minutes"] for day in tracking)
+        total_absences = sum(1 for day in tracking if day["est_absent"])
+        total_montant_deduit = sum(day["montant_total_deduit"] for day in tracking)
+        
+        return {
+            "agent_id": str(current_user.id),
+            "agent_nom": current_user.nom,
+            "periode": {
+                "debut": start_date.isoformat(),
+                "fin": end_date.isoformat()
+            },
+            "totaux": {
+                "retard_total_minutes": total_retard_minutes,
+                "retard_total_heures": round(total_retard_minutes / 60, 2),
+                "nombre_absences": total_absences,
+                "montant_total_deduit": round(total_montant_deduit, 2)
+            },
+            "details_quotidiens": tracking
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la récupération du suivi: {str(e)}"
         )

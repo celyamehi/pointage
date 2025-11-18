@@ -17,6 +17,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'Tableau de bord', to: '/agent', icon: 'home' },
     { name: 'Scanner QR Code', to: '/agent/scan', icon: 'qrcode' },
     { name: 'Mes Pointages', to: '/agent/pointages', icon: 'calendar' },
+    { name: 'Mon Suivi', to: '/agent/suivi', icon: 'chart-line' },
     { name: 'Mon Profil', to: '/agent/profil', icon: 'user' },
   ]
   
@@ -180,7 +181,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
             <div className="flex items-center space-x-4">
               <button
                 type="button"
-                className="md:hidden p-2 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100"
+                className="md:hidden p-2 rounded-md text-primary-600 bg-primary-50 hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 onClick={() => setIsMobileMenuOpen(true)}
               >
                 <i className="fas fa-bars text-xl"></i>
