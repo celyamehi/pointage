@@ -131,17 +131,32 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
         retard_total_minutes = retard_matin_minutes + retard_apres_midi_minutes
         retard_total_heures = round(retard_total_minutes / 60, 2)
         
-        # Déterminer si c'est une absence
-        est_absent = not (jour_data.get("matin_arrivee") and jour_data.get("apres_midi_sortie"))
+        # Calculer les absences par demi-journée (4h par session)
+        heures_par_session = HEURES_PAR_JOUR / 2  # 4 heures
+        
+        # Absence matin : pas d'arrivée matin OU pas de sortie matin
+        absent_matin = not (jour_data.get("matin_arrivee") and jour_data.get("matin_sortie"))
+        
+        # Absence après-midi : pas d'arrivée après-midi OU pas de sortie après-midi
+        absent_apres_midi = not (jour_data.get("apres_midi_arrivee") and jour_data.get("apres_midi_sortie"))
         
         # Calculer les montants déduits
         montant_retard = round(retard_total_heures * TAUX_HORAIRE, 2) if retard_total_minutes > 0 else 0
-        montant_absence = round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2) if est_absent else 0
+        
+        # Montant absence : seulement pour les sessions complètement absentes
+        montant_absence_matin = round(heures_par_session * TAUX_HORAIRE, 2) if absent_matin else 0
+        montant_absence_apres_midi = round(heures_par_session * TAUX_HORAIRE, 2) if absent_apres_midi else 0
+        montant_absence = montant_absence_matin + montant_absence_apres_midi
+        
         montant_total_deduit = montant_retard + montant_absence
         
-        # Déterminer le statut
+        # Déterminer le statut global
+        est_absent = absent_matin and absent_apres_midi
+        
         if est_absent:
             statut = "Absent"
+        elif absent_matin or absent_apres_midi:
+            statut = "Absence partielle"
         elif retard_total_minutes > 0:
             statut = "Retard"
         else:
@@ -156,8 +171,12 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
             "retard_total_minutes": retard_total_minutes,
             "retard_total_heures": retard_total_heures,
             "est_absent": est_absent,
+            "absent_matin": absent_matin,
+            "absent_apres_midi": absent_apres_midi,
             "montant_retard": montant_retard,
             "montant_absence": montant_absence,
+            "montant_absence_matin": montant_absence_matin,
+            "montant_absence_apres_midi": montant_absence_apres_midi,
             "montant_total_deduit": montant_total_deduit,
             "pointages": {
                 "matin_arrivee": jour_data.get("matin_arrivee"),

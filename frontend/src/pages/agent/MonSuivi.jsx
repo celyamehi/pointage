@@ -84,6 +84,7 @@ const MonSuivi = () => {
     const badges = {
       'Présent': 'bg-green-100 text-green-800',
       'Retard': 'bg-yellow-100 text-yellow-800',
+      'Absence partielle': 'bg-orange-100 text-orange-800',
       'Absent': 'bg-red-100 text-red-800'
     }
     return badges[statut] || 'bg-gray-100 text-gray-800'
@@ -286,9 +287,14 @@ const MonSuivi = () => {
                                 Retard: {formatMontant(jour.montant_retard)}
                               </div>
                             )}
-                            {jour.montant_absence > 0 && (
+                            {jour.montant_absence_matin > 0 && (
                               <div className="text-xs text-gray-500">
-                                Absence: {formatMontant(jour.montant_absence)}
+                                Absence matin: {formatMontant(jour.montant_absence_matin)}
+                              </div>
+                            )}
+                            {jour.montant_absence_apres_midi > 0 && (
+                              <div className="text-xs text-gray-500">
+                                Absence après-midi: {formatMontant(jour.montant_absence_apres_midi)}
                               </div>
                             )}
                           </div>
