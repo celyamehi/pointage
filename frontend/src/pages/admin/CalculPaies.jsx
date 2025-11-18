@@ -65,6 +65,16 @@ const CalculPaies = () => {
     }).format(montant)
   }
   
+  // Formater les heures de retard en minutes et heures
+  const formatRetard = (heures) => {
+    const minutes = Math.round(heures * 60)
+    return {
+      heures: heures,
+      minutes: minutes,
+      display: minutes > 0 ? `${minutes} min (${heures}h)` : '-'
+    }
+  }
+  
   // Formater le rôle
   const formatRole = (role) => {
     const roles = {
@@ -325,7 +335,7 @@ const CalculPaies = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {paie.heures_retard > 0 ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          {paie.heures_retard}h
+                          {formatRetard(paie.heures_retard).display}
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -370,7 +380,7 @@ const CalculPaies = () => {
               </div>
               
               {/* Informations générales */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Taux horaire</p>
                   <p className="text-lg font-semibold text-gray-900">{selectedAgent.taux_horaire} DA</p>
@@ -386,6 +396,12 @@ const CalculPaies = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Jours travaillés</p>
                   <p className="text-lg font-semibold text-gray-900">{selectedAgent.jours_travailles}</p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Retards total</p>
+                  <p className="text-lg font-semibold text-yellow-800">
+                    {selectedAgent.heures_retard > 0 ? formatRetard(selectedAgent.heures_retard).display : 'Aucun'}
+                  </p>
                 </div>
               </div>
               
