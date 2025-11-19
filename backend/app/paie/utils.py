@@ -172,9 +172,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
             jours_ouvres += 1
         current_date += timedelta(days=1)
     
-    # Analyser les absences et retards
+    # Analyser chaque jour
     jours_travailles = 0
     jours_absence = 0
+    jours_presence = 0  # Jours où l'agent est présent (même partiellement) pour les frais
     heures_retard_total = 0.0
     details_absences = []
     details_retards = []
@@ -223,8 +224,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                 
                 # Si présent au moins une session, compter comme jour travaillé
                 jours_travailles += 0.5
+                # Compter comme jour de présence pour les frais (panier/transport)
+                jours_presence += 1
                 
-                # Calculer le retard pour la session présente
+                # Calculer le retard à l'arrivée matin si présent
                 if jour_data.get("matin_arrivee") and not absent_matin:
                     heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
                     retard_minutes = calculer_retard_minutes(heure_arrivee)
@@ -237,7 +240,25 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             "heures": round(retard_minutes / 60.0, 2)
                         })
                 
-                # Calculer le retard après-midi si présent
+                # Calculer la sortie anticipée matin si présent
+                if jour_data.get("matin_sortie") and not absent_matin:
+                    heure_sortie = datetime.strptime(jour_data["matin_sortie"], "%H:%M:%S").time()
+                    heure_fin_matin = time(12, 0)
+                    
+                    if heure_sortie < heure_fin_matin:
+                        delta = datetime.combine(date.min, heure_fin_matin) - datetime.combine(date.min, heure_sortie)
+                        sortie_anticipee_minutes = int(delta.total_seconds() / 60)
+                        
+                        if sortie_anticipee_minutes > 0:
+                            heures_retard_total += sortie_anticipee_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": sortie_anticipee_minutes,
+                                "heures": round(sortie_anticipee_minutes / 60.0, 2),
+                                "type": "sortie_anticipee_matin"
+                            })
+                
+                # Calculer le retard à l'arrivée après-midi si présent
                 if jour_data.get("apres_midi_arrivee") and not absent_apres_midi:
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
                     heure_debut_apres_midi = time(13, 0)
@@ -253,11 +274,30 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                                 "minutes": retard_minutes,
                                 "heures": round(retard_minutes / 60.0, 2)
                             })
+                
+                # Calculer la sortie anticipée après-midi si présent
+                if jour_data.get("apres_midi_sortie") and not absent_apres_midi:
+                    heure_sortie = datetime.strptime(jour_data["apres_midi_sortie"], "%H:%M:%S").time()
+                    heure_fin_apres_midi = time(17, 0)
+                    
+                    if heure_sortie < heure_fin_apres_midi:
+                        delta = datetime.combine(date.min, heure_fin_apres_midi) - datetime.combine(date.min, heure_sortie)
+                        sortie_anticipee_minutes = int(delta.total_seconds() / 60)
+                        
+                        if sortie_anticipee_minutes > 0:
+                            heures_retard_total += sortie_anticipee_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": sortie_anticipee_minutes,
+                                "heures": round(sortie_anticipee_minutes / 60.0, 2),
+                                "type": "sortie_anticipee_apres_midi"
+                            })
             else:
                 # Présent toute la journée
                 jours_travailles += 1
+                jours_presence += 1  # Compter pour les frais
                 
-                # Calculer le retard du matin
+                # Calculer le retard à l'arrivée du matin
                 if jour_data.get("matin_arrivee"):
                     heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
                     retard_minutes = calculer_retard_minutes(heure_arrivee)
@@ -270,7 +310,25 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             "heures": round(retard_minutes / 60.0, 2)
                         })
                 
-                # Calculer le retard après-midi
+                # Calculer la sortie anticipée du matin (avant 12:00)
+                if jour_data.get("matin_sortie"):
+                    heure_sortie = datetime.strptime(jour_data["matin_sortie"], "%H:%M:%S").time()
+                    heure_fin_matin = time(12, 0)
+                    
+                    if heure_sortie < heure_fin_matin:
+                        delta = datetime.combine(date.min, heure_fin_matin) - datetime.combine(date.min, heure_sortie)
+                        sortie_anticipee_minutes = int(delta.total_seconds() / 60)
+                        
+                        if sortie_anticipee_minutes > 0:
+                            heures_retard_total += sortie_anticipee_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": sortie_anticipee_minutes,
+                                "heures": round(sortie_anticipee_minutes / 60.0, 2),
+                                "type": "sortie_anticipee_matin"
+                            })
+                
+                # Calculer le retard à l'arrivée après-midi
                 if jour_data.get("apres_midi_arrivee"):
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
                     heure_debut_apres_midi = time(13, 0)
@@ -285,6 +343,24 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                                 "date": date_str,
                                 "minutes": retard_minutes,
                                 "heures": round(retard_minutes / 60.0, 2)
+                            })
+                
+                # Calculer la sortie anticipée de l'après-midi (avant 17:00)
+                if jour_data.get("apres_midi_sortie"):
+                    heure_sortie = datetime.strptime(jour_data["apres_midi_sortie"], "%H:%M:%S").time()
+                    heure_fin_apres_midi = time(17, 0)
+                    
+                    if heure_sortie < heure_fin_apres_midi:
+                        delta = datetime.combine(date.min, heure_fin_apres_midi) - datetime.combine(date.min, heure_sortie)
+                        sortie_anticipee_minutes = int(delta.total_seconds() / 60)
+                        
+                        if sortie_anticipee_minutes > 0:
+                            heures_retard_total += sortie_anticipee_minutes / 60.0
+                            details_retards.append({
+                                "date": date_str,
+                                "minutes": sortie_anticipee_minutes,
+                                "heures": round(sortie_anticipee_minutes / 60.0, 2),
+                                "type": "sortie_anticipee_apres_midi"
                             })
         else:
             # Pas de pointage = absence complète
@@ -307,9 +383,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     # Les absences et retards sont déjà pris en compte dans le calcul des heures travaillées
     salaire_base = params.taux_horaire * heures_travaillees
     
-    # Frais calculés selon les jours réellement travaillés (avec pointages complets)
-    jours_panier = jours_travailles
-    jours_transport = jours_travailles
+    # Frais calculés selon les jours de présence (même partielle)
+    # Si l'agent est présent au moins une session, il a droit aux frais
+    jours_panier = jours_presence
+    jours_transport = jours_presence
     frais_panier_total = jours_panier * params.frais_panier
     frais_transport_total = jours_transport * params.frais_transport
     
