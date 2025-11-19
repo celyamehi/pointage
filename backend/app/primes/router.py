@@ -4,15 +4,15 @@ from uuid import UUID
 import logging
 
 from app.db import get_db
-from app.auth.dependencies import get_current_user, require_admin
+from app.auth.utils import get_current_active_user, get_admin_user
 from app.primes.models import Prime, PrimeCreate, PrimeUpdate, PrimesSummary
 
 router = APIRouter(prefix="/api/primes", tags=["primes"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("", response_model=Prime, dependencies=[Depends(require_admin)])
-async def create_prime(prime_data: PrimeCreate, current_user: dict = Depends(get_current_user)):
+@router.post("", response_model=Prime, dependencies=[Depends(get_admin_user)])
+async def create_prime(prime_data: PrimeCreate, current_user: dict = Depends(get_current_active_user)):
     """
     Créer une nouvelle prime pour un agent (admin uniquement)
     """
@@ -50,7 +50,7 @@ async def create_prime(prime_data: PrimeCreate, current_user: dict = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("", response_model=List[Prime], dependencies=[Depends(require_admin)])
+@router.get("", response_model=List[Prime], dependencies=[Depends(get_admin_user)])
 async def get_primes(
     mois: Optional[int] = None,
     annee: Optional[int] = None,
@@ -96,7 +96,7 @@ async def get_agent_primes(
     agent_id: str,
     mois: Optional[int] = None,
     annee: Optional[int] = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_active_user)
 ):
     """
     Récupérer les primes d'un agent spécifique
@@ -141,7 +141,7 @@ async def get_primes_summary(
     agent_id: str,
     mois: int,
     annee: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_active_user)
 ):
     """
     Récupérer le résumé des primes d'un agent pour un mois donné
@@ -180,7 +180,7 @@ async def get_primes_summary(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/{prime_id}", response_model=Prime, dependencies=[Depends(require_admin)])
+@router.put("/{prime_id}", response_model=Prime, dependencies=[Depends(get_admin_user)])
 async def update_prime(prime_id: str, prime_data: PrimeUpdate):
     """
     Mettre à jour une prime (admin uniquement)
@@ -209,7 +209,7 @@ async def update_prime(prime_id: str, prime_data: PrimeUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{prime_id}", dependencies=[Depends(require_admin)])
+@router.delete("/{prime_id}", dependencies=[Depends(get_admin_user)])
 async def delete_prime(prime_id: str):
     """
     Supprimer une prime (admin uniquement)

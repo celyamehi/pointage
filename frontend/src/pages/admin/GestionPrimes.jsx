@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { useAuth } from '../../contexts/AuthContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import api from '../../services/api'
+import { toast } from 'react-toastify'
 
 const GestionPrimes = () => {
-  const { token } = useAuth()
   const [primes, setPrimes] = useState([])
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(false)
@@ -34,9 +31,7 @@ const GestionPrimes = () => {
 
   const fetchAgents = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/admin/agents`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await api.get('/admin/agents')
       setAgents(response.data)
     } catch (err) {
       console.error('Erreur lors de la récupération des agents:', err)
@@ -46,14 +41,13 @@ const GestionPrimes = () => {
   const fetchPrimes = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (filterAgent) params.append('agent_id', filterAgent)
-      if (filterMois) params.append('mois', filterMois)
-      if (filterAnnee) params.append('annee', filterAnnee)
+      const params = {
+        agent_id: filterAgent || undefined,
+        mois: filterMois || undefined,
+        annee: filterAnnee || undefined
+      }
       
-      const response = await axios.get(`${API_URL}/api/primes?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await api.get('/primes', { params })
       setPrimes(response.data)
     } catch (err) {
       setError('Erreur lors de la récupération des primes')
@@ -69,9 +63,7 @@ const GestionPrimes = () => {
     setSuccess('')
     
     try {
-      await axios.post(`${API_URL}/api/primes`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.post('/primes', formData)
       
       setSuccess('Prime ajoutée avec succès')
       setShowModal(false)
@@ -92,9 +84,7 @@ const GestionPrimes = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette prime ?')) return
     
     try {
-      await axios.delete(`${API_URL}/api/primes/${primeId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.delete(`/primes/${primeId}`)
       setSuccess('Prime supprimée avec succès')
       fetchPrimes()
     } catch (err) {
