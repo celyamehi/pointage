@@ -328,12 +328,12 @@ const CalculPaies = () => {
                       {formatRole(paie.role)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                      {paie.jours_travailles}
+                      {paie.jours_travailles % 1 === 0 ? paie.jours_travailles : paie.jours_travailles.toFixed(1)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {paie.jours_absence > 0 ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                          {paie.jours_absence} jour{paie.jours_absence > 1 ? 's' : ''}
+                          {paie.jours_absence % 1 === 0 ? paie.jours_absence : paie.jours_absence.toFixed(1)} jour{paie.jours_absence > 1 ? 's' : ''}
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -402,7 +402,9 @@ const CalculPaies = () => {
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Jours travaillés</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedAgent.jours_travailles}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedAgent.jours_travailles % 1 === 0 ? selectedAgent.jours_travailles : selectedAgent.jours_travailles.toFixed(1)}
+                  </p>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Retards total</p>
@@ -430,12 +432,12 @@ const CalculPaies = () => {
                   </div>
                   
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de panier ({selectedAgent.jours_travailles} jours)</span>
+                    <span>Frais de panier ({selectedAgent.jours_travailles % 1 === 0 ? selectedAgent.jours_travailles : selectedAgent.jours_travailles.toFixed(1)} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_panier_total)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-green-600">
-                    <span>Frais de transport ({selectedAgent.jours_travailles} jours)</span>
+                    <span>Frais de transport ({selectedAgent.jours_travailles % 1 === 0 ? selectedAgent.jours_travailles : selectedAgent.jours_travailles.toFixed(1)} jours)</span>
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_transport_total)}</span>
                   </div>
                   

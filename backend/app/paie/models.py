@@ -29,9 +29,9 @@ class CalculPaie(BaseModel):
     heures_absence: float
     heures_retard: float
     
-    # Jours
-    jours_travailles: int
-    jours_absence: int
+    # Jours (peuvent être des demi-journées, ex: 0.5 pour absence partielle)
+    jours_travailles: float
+    jours_absence: float
     
     # Calculs financiers
     salaire_base: float
