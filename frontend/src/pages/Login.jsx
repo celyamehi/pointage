@@ -126,7 +126,7 @@ const Login = () => {
       
       {/* Footer */}
       <div className="mt-8 text-center">
-        <p className="text-gray-400 text-sm tracking-widest">OULOULOUUUUUU caca prout</p>
+        <p className="text-gray-400 text-sm tracking-widest">Powered by Collable</p>
       </div>
     </div>
   )
