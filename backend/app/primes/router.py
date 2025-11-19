@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=Prime, dependencies=[Depends(get_admin_user)])
-async def create_prime(prime_data: PrimeCreate, current_user: dict = Depends(get_current_active_user)):
+async def create_prime(prime_data: PrimeCreate, current_user = Depends(get_current_active_user)):
     """
     Créer une nouvelle prime pour un agent (admin uniquement)
     """
@@ -31,7 +31,7 @@ async def create_prime(prime_data: PrimeCreate, current_user: dict = Depends(get
             "motif": prime_data.motif,
             "mois": prime_data.mois,
             "annee": prime_data.annee,
-            "created_by": current_user["id"]
+            "created_by": str(current_user.id)
         }
         
         result = db.table("primes").insert(prime_insert).execute()
@@ -96,14 +96,14 @@ async def get_agent_primes(
     agent_id: str,
     mois: Optional[int] = None,
     annee: Optional[int] = None,
-    current_user: dict = Depends(get_current_active_user)
+    current_user = Depends(get_current_active_user)
 ):
     """
     Récupérer les primes d'un agent spécifique
     L'agent peut voir ses propres primes, l'admin peut voir toutes les primes
     """
     # Vérifier les permissions
-    if current_user["role"] != "admin" and current_user["id"] != agent_id:
+    if current_user.role != "admin" and str(current_user.id) != agent_id:
         raise HTTPException(status_code=403, detail="Accès non autorisé")
     
     db = await get_db()
@@ -141,13 +141,13 @@ async def get_primes_summary(
     agent_id: str,
     mois: int,
     annee: int,
-    current_user: dict = Depends(get_current_active_user)
+    current_user = Depends(get_current_active_user)
 ):
     """
     Récupérer le résumé des primes d'un agent pour un mois donné
     """
     # Vérifier les permissions
-    if current_user["role"] != "admin" and current_user["id"] != agent_id:
+    if current_user.role != "admin" and str(current_user.id) != agent_id:
         raise HTTPException(status_code=403, detail="Accès non autorisé")
     
     db = await get_db()
