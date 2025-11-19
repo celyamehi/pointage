@@ -31,7 +31,7 @@ const GestionPrimes = () => {
 
   const fetchAgents = async () => {
     try {
-      const response = await api.get('/admin/agents')
+      const response = await api.get('/api/admin/agents')
       setAgents(response.data)
     } catch (err) {
       console.error('Erreur lors de la récupération des agents:', err)
@@ -47,7 +47,7 @@ const GestionPrimes = () => {
         annee: filterAnnee || undefined
       }
       
-      const response = await api.get('/primes', { params })
+      const response = await api.get('/api/primes', { params })
       setPrimes(response.data)
     } catch (err) {
       setError('Erreur lors de la récupération des primes')
@@ -63,7 +63,7 @@ const GestionPrimes = () => {
     setSuccess('')
     
     try {
-      await api.post('/primes', formData)
+      await api.post('/api/primes', formData)
       
       setSuccess('Prime ajoutée avec succès')
       setShowModal(false)
@@ -84,7 +84,7 @@ const GestionPrimes = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette prime ?')) return
     
     try {
-      await api.delete(`/primes/${primeId}`)
+      await api.delete(`/api/primes/${primeId}`)
       setSuccess('Prime supprimée avec succès')
       fetchPrimes()
     } catch (err) {
