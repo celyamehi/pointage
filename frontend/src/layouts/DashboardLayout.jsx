@@ -45,9 +45,9 @@ const DashboardLayout = ({ isAdmin = false }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Barre de navigation latérale pour desktop */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
+        <div className="flex flex-col flex-grow bg-primary-900 pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <h1 className="text-2xl font-bold text-primary-600">Collable</h1>
+            <img src="/logoCollable11.png" alt="Collable" className="h-12" />
           </div>
           <div className="mt-8 flex-1 flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
@@ -58,8 +58,8 @@ const DashboardLayout = ({ isAdmin = false }) => {
                   className={({ isActive }) =>
                     `group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                       isActive
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-primary-700 text-white'
+                        : 'text-white hover:bg-primary-800'
                     }`
                   }
                 >
@@ -71,12 +71,12 @@ const DashboardLayout = ({ isAdmin = false }) => {
               ))}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+          <div className="flex-shrink-0 flex border-t border-primary-800 p-4">
             <div className="flex-shrink-0 w-full group block">
               <div className="flex items-center">
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700">{user?.nom}</p>
-                  <p className="text-xs font-medium text-gray-500">
+                  <p className="text-sm font-medium text-white">{user?.nom}</p>
+                  <p className="text-xs font-medium text-gray-300">
                     {user?.role === 'admin' ? 'Administrateur' :
                      user?.role === 'informaticien' ? 'Informaticien' :
                      user?.role === 'analyste_informaticienne' ? 'Analyste informaticienne' :
@@ -89,7 +89,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
               </div>
               <button
                 onClick={handleLogout}
-                className="mt-3 w-full flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
+                className="mt-3 w-full flex items-center px-2 py-2 text-sm font-medium rounded-md text-white hover:bg-red-600"
               >
                 <span className="mr-3 h-6 w-6 flex items-center justify-center">
                   <i className="fas fa-sign-out-alt"></i>
@@ -111,16 +111,16 @@ const DashboardLayout = ({ isAdmin = false }) => {
       
       {/* Menu mobile en sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-primary-900 transform transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-primary-600">Collable</h1>
+          <div className="flex items-center justify-between h-16 px-4 border-b border-primary-800">
+            <img src="/logoCollable11.png" alt="Collable" className="h-10" />
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
+              className="p-2 rounded-md text-white hover:bg-primary-800"
             >
               <i className="fas fa-times text-xl"></i>
             </button>
@@ -134,8 +134,8 @@ const DashboardLayout = ({ isAdmin = false }) => {
                 className={({ isActive }) =>
                   `group flex items-center px-2 py-3 text-sm font-medium rounded-md ${
                     isActive
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-primary-700 text-white'
+                      : 'text-white hover:bg-primary-800'
                   }`
                 }
                 onClick={() => setIsMobileMenuOpen(false)}
