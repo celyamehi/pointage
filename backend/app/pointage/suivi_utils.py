@@ -108,12 +108,14 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
             "apres_midi_sortie": None
         })
         
-        # Calculer les retards
+        # Calculer les retards (arrivées tardives + sorties anticipées)
         retard_matin_minutes = 0
         retard_apres_midi_minutes = 0
+        sortie_anticipee_matin_minutes = 0
+        sortie_anticipee_apres_midi_minutes = 0
         
+        # Retard à l'arrivée du matin
         if jour_data.get("matin_arrivee"):
-            # Parser l'heure au format HH:MM:SS
             heure_str = jour_data["matin_arrivee"]
             if isinstance(heure_str, str):
                 heure_arrivee = datetime.strptime(heure_str, "%H:%M:%S").time()
@@ -125,8 +127,21 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
                 delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_matin)
                 retard_matin_minutes = int(delta.total_seconds() / 60)
         
+        # Sortie anticipée du matin (avant 12:00)
+        if jour_data.get("matin_sortie"):
+            heure_str = jour_data["matin_sortie"]
+            if isinstance(heure_str, str):
+                heure_sortie = datetime.strptime(heure_str, "%H:%M:%S").time()
+            else:
+                heure_sortie = heure_str
+            heure_fin_matin = time(12, 0)
+            
+            if heure_sortie < heure_fin_matin:
+                delta = datetime.combine(date.min, heure_fin_matin) - datetime.combine(date.min, heure_sortie)
+                sortie_anticipee_matin_minutes = int(delta.total_seconds() / 60)
+        
+        # Retard à l'arrivée de l'après-midi
         if jour_data.get("apres_midi_arrivee"):
-            # Parser l'heure au format HH:MM:SS
             heure_str = jour_data["apres_midi_arrivee"]
             if isinstance(heure_str, str):
                 heure_arrivee = datetime.strptime(heure_str, "%H:%M:%S").time()
@@ -138,7 +153,21 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
                 delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
                 retard_apres_midi_minutes = int(delta.total_seconds() / 60)
         
-        retard_total_minutes = retard_matin_minutes + retard_apres_midi_minutes
+        # Sortie anticipée de l'après-midi (avant 17:00)
+        if jour_data.get("apres_midi_sortie"):
+            heure_str = jour_data["apres_midi_sortie"]
+            if isinstance(heure_str, str):
+                heure_sortie = datetime.strptime(heure_str, "%H:%M:%S").time()
+            else:
+                heure_sortie = heure_str
+            heure_fin_apres_midi = time(17, 0)
+            
+            if heure_sortie < heure_fin_apres_midi:
+                delta = datetime.combine(date.min, heure_fin_apres_midi) - datetime.combine(date.min, heure_sortie)
+                sortie_anticipee_apres_midi_minutes = int(delta.total_seconds() / 60)
+        
+        # Total des retards (arrivées tardives + sorties anticipées)
+        retard_total_minutes = retard_matin_minutes + retard_apres_midi_minutes + sortie_anticipee_matin_minutes + sortie_anticipee_apres_midi_minutes
         retard_total_heures = round(retard_total_minutes / 60, 2)
         
         # Calculer les absences par demi-journée (4h par session)
@@ -185,6 +214,8 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
             "statut": statut,
             "retard_matin_minutes": retard_matin_minutes,
             "retard_apres_midi_minutes": retard_apres_midi_minutes,
+            "sortie_anticipee_matin_minutes": sortie_anticipee_matin_minutes,
+            "sortie_anticipee_apres_midi_minutes": sortie_anticipee_apres_midi_minutes,
             "retard_total_minutes": retard_total_minutes,
             "retard_total_heures": retard_total_heures,
             "est_absent": est_absent,

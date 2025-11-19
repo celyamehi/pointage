@@ -245,19 +245,37 @@ const MonSuivi = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                        {jour.retard_matin_minutes > 0 ? (
-                          <span className="text-yellow-600 font-medium">
-                            {jour.retard_matin_minutes} min
-                          </span>
+                        {(jour.retard_matin_minutes > 0 || jour.sortie_anticipee_matin_minutes > 0) ? (
+                          <div className="flex flex-col items-center">
+                            {jour.retard_matin_minutes > 0 && (
+                              <span className="text-yellow-600 font-medium">
+                                Retard: {jour.retard_matin_minutes} min
+                              </span>
+                            )}
+                            {jour.sortie_anticipee_matin_minutes > 0 && (
+                              <span className="text-orange-600 font-medium text-xs">
+                                Sortie: {jour.sortie_anticipee_matin_minutes} min
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                        {jour.retard_apres_midi_minutes > 0 ? (
-                          <span className="text-yellow-600 font-medium">
-                            {jour.retard_apres_midi_minutes} min
-                          </span>
+                        {(jour.retard_apres_midi_minutes > 0 || jour.sortie_anticipee_apres_midi_minutes > 0) ? (
+                          <div className="flex flex-col items-center">
+                            {jour.retard_apres_midi_minutes > 0 && (
+                              <span className="text-yellow-600 font-medium">
+                                Retard: {jour.retard_apres_midi_minutes} min
+                              </span>
+                            )}
+                            {jour.sortie_anticipee_apres_midi_minutes > 0 && (
+                              <span className="text-orange-600 font-medium text-xs">
+                                Sortie: {jour.sortie_anticipee_apres_midi_minutes} min
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
