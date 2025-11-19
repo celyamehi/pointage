@@ -397,13 +397,30 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     # Salaire net = Salaire de base + Frais
     salaire_net = salaire_base + frais_panier_total + frais_transport_total
     
+    # Récupérer les primes pour ce mois
+    primes_response = db.table("primes").select("*").eq("agent_id", agent_id).eq("mois", mois).eq("annee", annee).execute()
+    
+    details_primes = []
+    primes_total = 0.0
+    
+    if primes_response.data:
+        for prime in primes_response.data:
+            primes_total += prime["montant"]
+            details_primes.append({
+                "montant": prime["montant"],
+                "motif": prime["motif"],
+                "id": prime["id"]
+            })
+    
+    logger.info(f"   Primes: {primes_total} DA ({len(details_primes)} prime(s))")
+    
     # Retenues calculées sur le salaire de base (heures travaillées × taux horaire)
     retenues_9_pourcent = salaire_base * 0.09  # 9% du salaire de base
     retenues_fixes = 4244.80  # Montant fixe
     retenues_total = retenues_9_pourcent + retenues_fixes
     
-    # Paie finale
-    paie_finale = salaire_net - retenues_total
+    # Paie finale = Salaire net + Primes - Retenues
+    paie_finale = salaire_net + primes_total - retenues_total
     
     return CalculPaie(
         agent_id=agent_id,
@@ -423,13 +440,15 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         frais_panier_total=round(frais_panier_total, 2),
         frais_transport_total=round(frais_transport_total, 2),
         salaire_net=round(salaire_net, 2),
+        primes_total=round(primes_total, 2),
         retenues_9_pourcent=round(retenues_9_pourcent, 2),
         retenues_fixes=round(retenues_fixes, 2),
         retenues_total=round(retenues_total, 2),
         paie_finale=round(paie_finale, 2),
         taux_horaire=params.taux_horaire,
         details_absences=details_absences,
-        details_retards=details_retards
+        details_retards=details_retards,
+        details_primes=details_primes
     )
 
 

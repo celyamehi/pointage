@@ -22,6 +22,7 @@ import GestionAgents from './pages/admin/GestionAgents'
 import GestionQRCode from './pages/admin/GestionQRCode'
 import PointagesDetailles from './pages/admin/PointagesDetailles'
 import CalculPaies from './pages/admin/CalculPaies'
+import GestionPrimes from './pages/admin/GestionPrimes'
 
 // Route protégée pour les utilisateurs authentifiés
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -83,6 +84,7 @@ function App() {
         <Route path="pointages" element={<Navigate to="/admin/pointages-detailles" replace />} />
         <Route path="pointages-detailles" element={<PointagesDetailles />} />
         <Route path="paies" element={<CalculPaies />} />
+        <Route path="primes" element={<GestionPrimes />} />
       </Route>
       
       {/* Redirection par défaut */}

@@ -20,6 +20,7 @@ from app.qrcode import router as qrcode_router
 from app.pointage import router as pointage_router
 from app.admin import router as admin_router
 from app.paie import router as paie_router
+from app.primes import router as primes_router
 from app.db import init_db
 
 # Les variables d'environnement sont définies directement dans app/db.py
@@ -63,6 +64,7 @@ app.include_router(qrcode_router.router, prefix="/api/qrcode", tags=["QR Code"])
 app.include_router(pointage_router.router, prefix="/api/pointage", tags=["Pointage"])
 app.include_router(admin_router.router, prefix="/api/admin", tags=["Administration"])
 app.include_router(paie_router, prefix="/api/paie", tags=["Paie"])
+app.include_router(primes_router.router, tags=["Primes"])
 
 # Route racine
 @app.get("/", tags=["Root"])

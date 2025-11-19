@@ -4,11 +4,13 @@ import { toast } from 'react-toastify'
 
 const CalculPaies = () => {
   const [paies, setPaies] = useState([])
+  const [paiesFiltered, setPaiesFiltered] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [filterAgent, setFilterAgent] = useState('')
   
   // Générer les années disponibles (5 ans en arrière et 1 an en avant)
   const currentYear = new Date().getFullYear()
@@ -42,6 +44,7 @@ const CalculPaies = () => {
       })
       
       setPaies(response.data)
+      setPaiesFiltered(response.data)
       toast.success('Calcul des paies effectué avec succès')
     } catch (error) {
       console.error('Erreur lors du calcul des paies:', error)
@@ -55,6 +58,15 @@ const CalculPaies = () => {
   useEffect(() => {
     fetchPaies()
   }, [selectedMonth, selectedYear])
+  
+  // Filtrer les paies par agent
+  useEffect(() => {
+    if (filterAgent === '') {
+      setPaiesFiltered(paies)
+    } else {
+      setPaiesFiltered(paies.filter(paie => paie.agent_id === filterAgent))
+    }
+  }, [filterAgent, paies])
   
   // Formater les montants en DA
   const formatMontant = (montant) => {
@@ -164,8 +176,8 @@ const CalculPaies = () => {
       
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
             <label htmlFor="month" className="label">
               Mois
             </label>
@@ -183,7 +195,7 @@ const CalculPaies = () => {
             </select>
           </div>
           
-          <div className="flex-1">
+          <div>
             <label htmlFor="year" className="label">
               Année
             </label>
@@ -202,9 +214,28 @@ const CalculPaies = () => {
           </div>
           
           <div>
+            <label htmlFor="filterAgent" className="label">
+              Filtrer par agent
+            </label>
+            <select
+              id="filterAgent"
+              className="input"
+              value={filterAgent}
+              onChange={(e) => setFilterAgent(e.target.value)}
+            >
+              <option value="">Tous les agents</option>
+              {paies.map(paie => (
+                <option key={paie.agent_id} value={paie.agent_id}>
+                  {paie.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-end">
             <button
               onClick={fetchPaies}
-              className="btn btn-primary"
+              className="btn btn-primary w-full"
               disabled={isLoading}
             >
               {isLoading ? 'Calcul en cours...' : 'Recalculer'}
@@ -224,7 +255,7 @@ const CalculPaies = () => {
       </div>
       
       {/* Statistiques */}
-      {paies.length > 0 && (
+      {paiesFiltered.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
@@ -232,8 +263,8 @@ const CalculPaies = () => {
                 <i className="fas fa-users text-blue-600 text-2xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Nombre d'agents</p>
-                <p className="text-2xl font-semibold text-gray-900">{paies.length}</p>
+                <p className="text-sm font-medium text-gray-500">Nombre d'agents{filterAgent ? ' (filtré)' : ''}</p>
+                <p className="text-2xl font-semibold text-gray-900">{paiesFiltered.length}</p>
               </div>
             </div>
           </div>
@@ -244,8 +275,8 @@ const CalculPaies = () => {
                 <i className="fas fa-money-bill-wave text-green-600 text-2xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total des paies</p>
-                <p className="text-2xl font-semibold text-gray-900">{formatMontant(totalPaies)}</p>
+                <p className="text-sm font-medium text-gray-500">Total des paies{filterAgent ? ' (filtré)' : ''}</p>
+                <p className="text-2xl font-semibold text-gray-900">{formatMontant(paiesFiltered.reduce((sum, p) => sum + p.paie_finale, 0))}</p>
               </div>
             </div>
           </div>
@@ -258,7 +289,7 @@ const CalculPaies = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Paie moyenne</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {formatMontant(totalPaies / paies.length)}
+                  {formatMontant(paiesFiltered.reduce((sum, p) => sum + p.paie_finale, 0) / paiesFiltered.length)}
                 </p>
               </div>
             </div>
@@ -273,9 +304,9 @@ const CalculPaies = () => {
             <h2 className="text-lg font-semibold text-gray-700">
               Détails des paies - {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h2>
-            {paies.length > 0 && (
+            {paiesFiltered.length > 0 && (
               <span className="text-sm text-gray-500">
-                {paies.length} agent{paies.length > 1 ? 's' : ''}
+                {paiesFiltered.length} agent{paiesFiltered.length > 1 ? 's' : ''}{filterAgent ? ' (filtré)' : ''}
               </span>
             )}
           </div>
@@ -285,9 +316,9 @@ const CalculPaies = () => {
           <div className="flex justify-center p-6">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
           </div>
-        ) : paies.length === 0 ? (
+        ) : paiesFiltered.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
-            Aucune donnée de paie disponible pour cette période.
+            {paies.length === 0 ? 'Aucune donnée de paie disponible pour cette période.' : 'Aucun agent ne correspond au filtre.'}
           </div>
         ) : (
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
@@ -318,7 +349,7 @@ const CalculPaies = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paies.map((paie) => (
+                {paiesFiltered.map((paie) => (
                   <tr key={paie.agent_id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{paie.nom}</div>
@@ -447,6 +478,26 @@ const CalculPaies = () => {
                       <span className="text-xl font-bold text-gray-900">{formatMontant(selectedAgent.salaire_net)}</span>
                     </div>
                   </div>
+                  
+                  {/* Primes */}
+                  {selectedAgent.primes_total > 0 && (
+                    <div className="bg-blue-50 p-3 rounded-lg mt-3">
+                      <div className="flex justify-between items-center text-blue-700 font-semibold">
+                        <span>Primes</span>
+                        <span>+ {formatMontant(selectedAgent.primes_total)}</span>
+                      </div>
+                      {selectedAgent.details_primes && selectedAgent.details_primes.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {selectedAgent.details_primes.map((prime, index) => (
+                            <div key={index} className="text-xs text-blue-600 flex justify-between">
+                              <span>{prime.motif}</span>
+                              <span>{formatMontant(prime.montant)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="bg-orange-50 p-3 rounded-lg mt-3">
                     <div className="flex justify-between items-center text-orange-700 mb-2">

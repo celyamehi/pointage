@@ -40,15 +40,17 @@ class CalculPaie(BaseModel):
     frais_panier_total: float
     frais_transport_total: float
     salaire_net: float
+    primes_total: float = 0.0  # Total des primes
     retenues_9_pourcent: float  # 9% du salaire de base
     retenues_fixes: float  # 4244.80 DA
     retenues_total: float  # Total des retenues
-    paie_finale: float  # Salaire net - retenues
+    paie_finale: float  # Salaire net + primes - retenues
     
     # Détails
     taux_horaire: float
     details_absences: Optional[list] = []
     details_retards: Optional[list] = []
+    details_primes: Optional[list] = []  # Liste des primes
 
 
 class PeriodePaie(BaseModel):

@@ -36,6 +36,7 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'QR Code', to: '/admin/qrcode', icon: 'qrcode' },
     { name: 'Pointages', to: '/admin/pointages-detailles', icon: 'list' },
     { name: 'Calcul des Paies', to: '/admin/paies', icon: 'money-bill-wave' },
+    { name: 'Gestion des Primes', to: '/admin/primes', icon: 'gift' },
   ]
   
   const navigation = isAdmin ? adminNavigation : agentNavigation
