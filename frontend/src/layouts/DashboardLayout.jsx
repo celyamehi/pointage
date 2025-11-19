@@ -13,13 +13,21 @@ const DashboardLayout = ({ isAdmin = false }) => {
   }
   
   // Navigation pour les agents
-  const agentNavigation = [
+  const agentNavigationBase = [
     { name: 'Tableau de bord', to: '/agent', icon: 'home' },
     { name: 'Scanner QR Code', to: '/agent/scan', icon: 'qrcode' },
     { name: 'Mes Pointages', to: '/agent/pointages', icon: 'calendar' },
-    { name: 'Mon Suivi', to: '/agent/suivi', icon: 'chart-line' },
+    { name: 'Mon Suivi', to: '/agent/suivi', icon: 'chart-line', excludeRoles: ['superviseur', 'charge_administration'] },
     { name: 'Mon Profil', to: '/agent/profil', icon: 'user' },
   ]
+  
+  // Filtrer la navigation en fonction du rôle de l'utilisateur
+  const agentNavigation = agentNavigationBase.filter(item => {
+    if (item.excludeRoles && user?.role) {
+      return !item.excludeRoles.includes(user.role)
+    }
+    return true
+  })
   
   // Navigation pour les administrateurs
   const adminNavigation = [
