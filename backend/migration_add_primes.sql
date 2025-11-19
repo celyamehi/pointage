@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS primes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-    montant DECIMAL(10, 2) NOT NULL,
+    montant DECIMAL(12, 2) NOT NULL,
     motif TEXT NOT NULL,
     mois INTEGER NOT NULL CHECK (mois >= 1 AND mois <= 12),
     annee INTEGER NOT NULL,
@@ -17,26 +17,9 @@ CREATE TABLE IF NOT EXISTS primes (
 CREATE INDEX IF NOT EXISTS idx_primes_agent_id ON primes(agent_id);
 CREATE INDEX IF NOT EXISTS idx_primes_mois_annee ON primes(mois, annee);
 
--- Activer RLS (Row Level Security)
-ALTER TABLE primes ENABLE ROW LEVEL SECURITY;
-
--- Politique : Les admins peuvent tout faire
-CREATE POLICY "Admins can do everything on primes"
-    ON primes
-    FOR ALL
-    USING (
-        EXISTS (
-            SELECT 1 FROM agents
-            WHERE agents.id = auth.uid()
-            AND agents.role = 'admin'
-        )
-    );
-
--- Politique : Les agents peuvent voir leurs propres primes
-CREATE POLICY "Agents can view their own primes"
-    ON primes
-    FOR SELECT
-    USING (agent_id = auth.uid());
+-- Désactiver RLS temporairement pour permettre l'accès via l'API
+-- L'authentification est gérée par FastAPI avec JWT
+ALTER TABLE primes DISABLE ROW LEVEL SECURITY;
 
 -- Commentaires
 COMMENT ON TABLE primes IS 'Table des primes attribuées aux agents';

@@ -24,7 +24,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "admin": ParametresPaie(
         role="admin",
-        taux_horaire=250.0,  # À ajuster selon vos besoins
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
@@ -33,7 +33,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "informaticien": ParametresPaie(
         role="informaticien",
-        taux_horaire=250.0,  # À ajuster
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
@@ -42,7 +42,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "analyste_informaticienne": ParametresPaie(
         role="analyste_informaticienne",
-        taux_horaire=230.0,  # À ajuster
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
@@ -51,7 +51,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "superviseur": ParametresPaie(
         role="superviseur",
-        taux_horaire=220.0,  # À ajuster
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
@@ -60,7 +60,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "agent_administratif": ParametresPaie(
         role="agent_administratif",
-        taux_horaire=200.0,  # À ajuster
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
@@ -69,7 +69,7 @@ PARAMETRES_PAIE_PAR_ROLE = {
     ),
     "charge_administration": ParametresPaie(
         role="charge_administration",
-        taux_horaire=210.0,  # À ajuster
+        taux_horaire=182.18,
         heures_par_jour=8,
         heures_par_mois=174,
         jours_travail_mois=22,
