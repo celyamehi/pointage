@@ -23,6 +23,7 @@ import GestionQRCode from './pages/admin/GestionQRCode'
 import PointagesDetailles from './pages/admin/PointagesDetailles'
 import CalculPaies from './pages/admin/CalculPaies'
 import GestionPrimes from './pages/admin/GestionPrimes'
+import GestionApiKeys from './pages/admin/GestionApiKeys'
 
 // Route protégée pour les utilisateurs authentifiés
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -85,6 +86,7 @@ function App() {
         <Route path="pointages-detailles" element={<PointagesDetailles />} />
         <Route path="paies" element={<CalculPaies />} />
         <Route path="primes" element={<GestionPrimes />} />
+        <Route path="api-keys" element={<GestionApiKeys />} />
       </Route>
       
       {/* Redirection par défaut */}
