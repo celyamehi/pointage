@@ -44,6 +44,7 @@ app.add_middleware(
         "https://pointage-two.vercel.app",
         "https://pointage-deux.vercel.app",
         "https://pointage-p5dr.onrender.com",
+        "https://deshboard-olive.vercel.app",
         "*"  # Permet toutes les origines en développement
     ],
     allow_credentials=True,
