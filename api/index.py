@@ -1,20 +1,25 @@
-from fastapi import FastAPI
-from mangum import Mangum
+from http.server import BaseHTTPRequestHandler
+import json
 
-# Créer une app FastAPI minimale pour Vercel
-app = FastAPI(title="Pointage API", version="1.0.0")
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        
+        response = {
+            "status": "healthy",
+            "message": "API Pointage fonctionne",
+            "path": self.path
+        }
+        self.wfile.write(json.dumps(response).encode())
+        return
 
-@app.get("/")
-async def root():
-    return {"message": "API Pointage fonctionne"}
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "timestamp": "2024"}
-
-@app.get("/api/health")
-async def api_health():
-    return {"status": "healthy", "timestamp": "2024"}
-
-# Adapter FastAPI pour Vercel
-handler = Mangum(app)
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key')
+        self.end_headers()
+        return
