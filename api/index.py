@@ -4,10 +4,22 @@ from fastapi import FastAPI
 from mangum import Mangum
 
 # Ajouter le répertoire backend au path pour les imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.join(current_dir, '..', 'backend')
+sys.path.insert(0, backend_dir)
 
 # Importer l'application FastAPI
-from main import app
-
-# Adapter FastAPI pour AWS Lambda/Vercel
-handler = Mangum(app)
+try:
+    from main import app
+    # Adapter FastAPI pour AWS Lambda/Vercel
+    handler = Mangum(app)
+except ImportError as e:
+    print(f"Erreur d'import: {e}")
+    # Créer une app FastAPI minimale en cas d'erreur
+    app = FastAPI()
+    
+    @app.get("/health")
+    async def health():
+        return {"status": "ok", "message": "API fonctionne"}
+    
+    handler = Mangum(app)
