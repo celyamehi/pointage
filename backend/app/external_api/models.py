@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 
@@ -37,31 +37,3 @@ class AgentExterne(BaseModel):
     nom: str
     email: str
     role: str
-
-
-class JourPresence(BaseModel):
-    """Détail d'une journée de présence"""
-    date: str
-    est_present: bool
-    est_absent: bool
-    retard_matin_minutes: int = 0
-    retard_apres_midi_minutes: int = 0
-    retard_total_minutes: int = 0
-    heures_travaillees: Optional[float] = None
-
-
-class AttendanceResponse(BaseModel):
-    """Réponse pour les données de présence d'un agent"""
-    agent_id: str
-    agent_nom: str
-    agent_email: str
-    periode: str
-    resume: dict
-    details: List[JourPresence]
-
-
-class HealthResponse(BaseModel):
-    """Réponse pour le health check"""
-    status: str
-    timestamp: str
-    version: str

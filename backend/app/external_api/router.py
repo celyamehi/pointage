@@ -9,9 +9,7 @@ from app.external_api.models import (
     ApiKeyCreate, 
     ApiKeyResponse, 
     ApiKeyListResponse,
-    AgentExterne,
-    AttendanceResponse,
-    HealthResponse
+    AgentExterne
 )
 from app.external_api.utils import (
     verify_api_key,
@@ -19,8 +17,7 @@ from app.external_api.utils import (
     list_api_keys,
     toggle_api_key,
     delete_api_key,
-    get_all_agents_external,
-    get_agent_attendance
+    get_all_agents_external
 )
 
 logger = logging.getLogger(__name__)
@@ -29,27 +26,16 @@ router = APIRouter()
 
 
 # ============================================
-# ENDPOINTS PUBLICS (avec clé API)
+# ENDPOINT API EXTERNE (avec clé API)
 # ============================================
-
-@router.get("/health", response_model=HealthResponse, tags=["API Externe"])
-async def health_check():
-    """
-    🔌 Test de connexion à l'API
-    Aucune authentification requise
-    """
-    return {
-        "status": "ok",
-        "timestamp": datetime.now().isoformat(),
-        "version": "1.0.0"
-    }
-
 
 @router.get("/agents", response_model=List[AgentExterne], tags=["API Externe"])
 async def get_agents(api_key_data: dict = Depends(verify_api_key)):
     """
     🔌 Liste de tous les agents
     Requiert une clé API valide dans le header X-API-Key
+    
+    Retourne la liste des agents avec: id, nom, email, role
     """
     try:
         logger.info(f"API externe - Liste agents demandée par: {api_key_data['nom']}")
@@ -57,35 +43,6 @@ async def get_agents(api_key_data: dict = Depends(verify_api_key)):
         return agents
     except Exception as e:
         logger.error(f"Erreur API externe agents: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/attendance/{agent_id}", response_model=AttendanceResponse, tags=["API Externe"])
-async def get_attendance(
-    agent_id: str,
-    mois: str = Query(..., description="Mois au format YYYY-MM (ex: 2024-12)"),
-    api_key_data: dict = Depends(verify_api_key)
-):
-    """
-    🔌 Données de présence d'un agent pour un mois donné
-    
-    - **agent_id**: ID de l'agent
-    - **mois**: Mois au format YYYY-MM (ex: 2024-12)
-    
-    Retourne:
-    - Résumé: jours travaillés, absences, retards totaux
-    - Détails jour par jour: présence, retards matin/après-midi
-    
-    Requiert une clé API valide dans le header X-API-Key
-    """
-    try:
-        logger.info(f"API externe - Attendance demandée pour agent {agent_id}, mois {mois} par: {api_key_data['nom']}")
-        attendance = await get_agent_attendance(agent_id, mois)
-        return attendance
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erreur API externe attendance: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
