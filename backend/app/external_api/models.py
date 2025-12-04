@@ -21,10 +21,10 @@ class ApiKeyResponse(BaseModel):
 
 
 class ApiKeyListResponse(BaseModel):
-    """Modèle de réponse pour la liste des clés API (sans la clé complète)"""
+    """Modèle de réponse pour la liste des clés API (avec la clé complète)"""
     id: str
     nom: str
-    api_key_preview: str  # Affiche seulement les 8 premiers caractères
+    api_key: str  # Clé complète, toujours visible et copiable
     description: Optional[str] = None
     actif: bool
     created_at: datetime

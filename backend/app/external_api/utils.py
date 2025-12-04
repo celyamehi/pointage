@@ -1,5 +1,4 @@
 import secrets
-import hashlib
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 from fastapi import HTTPException, Security, status
@@ -16,11 +15,6 @@ def generate_api_key() -> str:
     return f"collable_{secrets.token_urlsafe(32)}"
 
 
-def hash_api_key(api_key: str) -> str:
-    """Hash une clé API pour le stockage"""
-    return hashlib.sha256(api_key.encode()).hexdigest()
-
-
 async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> dict:
     """
     Vérifie la validité d'une clé API
@@ -34,11 +28,8 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> dict:
     
     db = await get_db()
     
-    # Hasher la clé pour la comparaison
-    hashed_key = hash_api_key(api_key)
-    
-    # Rechercher la clé dans la base
-    result = db.table("api_keys").select("*").eq("api_key_hash", hashed_key).eq("actif", True).execute()
+    # Rechercher la clé en clair dans la base
+    result = db.table("api_keys").select("*").eq("api_key", api_key).eq("actif", True).execute()
     
     if not result.data or len(result.data) == 0:
         raise HTTPException(
@@ -55,19 +46,17 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> dict:
 
 
 async def create_api_key(nom: str, description: Optional[str] = None) -> dict:
-    """Crée une nouvelle clé API"""
+    """Crée une nouvelle clé API (stockée en clair, copiable à tout moment)"""
     db = await get_db()
     
     # Générer la clé
     api_key = generate_api_key()
-    api_key_hash = hash_api_key(api_key)
     
-    # Créer l'entrée en base
+    # Créer l'entrée en base (clé stockée en clair)
     new_key = {
         "nom": nom,
         "description": description,
-        "api_key_hash": api_key_hash,
-        "api_key_preview": api_key[:16] + "...",
+        "api_key": api_key,  # Clé stockée en clair
         "actif": True,
         "created_at": datetime.now().isoformat()
     }
@@ -80,12 +69,11 @@ async def create_api_key(nom: str, description: Optional[str] = None) -> dict:
             detail="Erreur lors de la création de la clé API"
         )
     
-    # Retourner la clé complète (une seule fois, elle ne sera plus visible après)
     created = result.data[0]
     return {
         "id": created["id"],
         "nom": created["nom"],
-        "api_key": api_key,  # Clé complète, visible une seule fois
+        "api_key": created["api_key"],  # Clé complète, toujours visible
         "description": created["description"],
         "actif": created["actif"],
         "created_at": created["created_at"]
@@ -93,9 +81,9 @@ async def create_api_key(nom: str, description: Optional[str] = None) -> dict:
 
 
 async def list_api_keys() -> List[dict]:
-    """Liste toutes les clés API (sans les clés complètes)"""
+    """Liste toutes les clés API (avec les clés complètes)"""
     db = await get_db()
-    result = db.table("api_keys").select("id, nom, api_key_preview, description, actif, created_at, last_used_at").order("created_at", desc=True).execute()
+    result = db.table("api_keys").select("id, nom, api_key, description, actif, created_at, last_used_at").order("created_at", desc=True).execute()
     return result.data if result.data else []
 
 
