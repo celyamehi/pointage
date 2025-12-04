@@ -114,14 +114,14 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
         sortie_anticipee_matin_minutes = 0
         sortie_anticipee_apres_midi_minutes = 0
         
-        # Retard à l'arrivée du matin
+        # Retard à l'arrivée du matin (à partir de 08h05)
         if jour_data.get("matin_arrivee"):
             heure_str = jour_data["matin_arrivee"]
             if isinstance(heure_str, str):
                 heure_arrivee = datetime.strptime(heure_str, "%H:%M:%S").time()
             else:
                 heure_arrivee = heure_str
-            heure_debut_matin = time(8, 0)
+            heure_debut_matin = time(8, 5)  # 08h05 - 5 minutes de tolérance
             
             if heure_arrivee > heure_debut_matin:
                 delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_matin)
