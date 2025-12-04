@@ -37,7 +37,6 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'Pointages', to: '/admin/pointages-detailles', icon: 'list' },
     { name: 'Calcul des Paies', to: '/admin/paies', icon: 'money-bill-wave' },
     { name: 'Gestion des Primes', to: '/admin/primes', icon: 'gift' },
-    { name: 'Clés API', to: '/admin/api-keys', icon: 'key' },
   ]
   
   const navigation = isAdmin ? adminNavigation : agentNavigation
