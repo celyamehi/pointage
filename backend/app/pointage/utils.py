@@ -9,26 +9,183 @@ from app.qrcode.utils import validate_qrcode
 TIMEZONE = timezone(timedelta(hours=1))
 
 
-async def determine_session() -> str:
+async def determine_session_simple() -> str:
     """
-    Détermine la session (matin ou après-midi) en fonction de l'heure actuelle
+    Détermine la session (matin ou après-midi) en fonction de l'heure actuelle uniquement
+    - Matin: avant 13h
+    - Après-midi: à partir de 13h
+    Note: La pause est de 12h à 13h, donc entre 12h et 13h on reste en session matin
+    pour permettre les sorties matin
     """
     now_gmt1 = datetime.now(TIMEZONE)
     current_hour = now_gmt1.hour
-    print(f"🕒 Heure actuelle (GMT+1): {now_gmt1.strftime('%H:%M:%S')} - Session: {'matin' if current_hour < 12 else 'après-midi'}")
     
-    if current_hour < 12:
-        return "matin"
+    # La session après-midi commence à 13h (après la pause)
+    if current_hour < 13:
+        session = "matin"
     else:
-        return "apres-midi"
+        session = "apres-midi"
+    
+    print(f"🕒 Heure actuelle (GMT+1): {now_gmt1.strftime('%H:%M:%S')} - Session simple: {session}")
+    return session
 
 
-async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
+async def determine_session_for_agent(agent_id: str, force_confirmation: bool = False) -> tuple[str, str, bool, str]:
+    """
+    Détermine la session et le type de pointage pour un agent en fonction:
+    1. De l'heure actuelle
+    2. Des pointages déjà effectués aujourd'hui
+    
+    Horaires:
+    - Matin: 8h05 - 12h00 (arrivée puis sortie)
+    - Pause: 12h00 - 13h00
+    - Après-midi: 13h00 - 17h00 (arrivée puis sortie)
+    
+    Retourne: (session, type_pointage, needs_confirmation, confirmation_message)
+    
+    Si l'agent rescanne dans les 5 minutes après son arrivée (matin ou après-midi),
+    on demande une confirmation avant d'enregistrer la sortie.
+    """
+    from app.db import get_db
+    db = await get_db()
+    
+    now_gmt1 = datetime.now(TIMEZONE)
+    current_hour = now_gmt1.hour
+    current_minute = now_gmt1.minute
+    today = now_gmt1.date().isoformat()
+    
+    # Délai minimum entre arrivée et sortie (en minutes)
+    DELAI_CONFIRMATION_MINUTES = 5
+    
+    print(f"🕒 Heure actuelle (GMT+1): {now_gmt1.strftime('%H:%M:%S')}")
+    
+    # Récupérer tous les pointages de l'agent pour aujourd'hui (exclure les annulés)
+    existing_pointages = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).or_("annule.is.null,annule.eq.false").order("heure_pointage").execute()
+    pointages_today = existing_pointages.data if existing_pointages.data else []
+    
+    # Séparer les pointages par session (uniquement les non-annulés)
+    pointages_matin = [p for p in pointages_today if p.get("session") == "matin" and not p.get("annule")]
+    pointages_aprem = [p for p in pointages_today if p.get("session") == "apres-midi" and not p.get("annule")]
+    
+    nb_matin = len(pointages_matin)
+    nb_aprem = len(pointages_aprem)
+    
+    print(f"📊 Pointages aujourd'hui - Matin: {nb_matin}, Après-midi: {nb_aprem}")
+    
+    def check_time_since_arrival(pointage_arrivee) -> tuple[bool, int]:
+        """
+        Vérifie si le pointage d'arrivée date de moins de DELAI_CONFIRMATION_MINUTES minutes.
+        Retourne (needs_confirmation, minutes_depuis_arrivee)
+        """
+        heure_arrivee_str = pointage_arrivee.get("heure_pointage")
+        if not heure_arrivee_str:
+            return (False, 0)
+        
+        # Parser l'heure d'arrivée
+        try:
+            heure_arrivee = datetime.strptime(heure_arrivee_str, "%H:%M:%S").time()
+            # Créer un datetime complet pour aujourd'hui
+            arrivee_datetime = datetime.combine(now_gmt1.date(), heure_arrivee)
+            arrivee_datetime = arrivee_datetime.replace(tzinfo=TIMEZONE)
+            
+            # Calculer la différence en minutes
+            diff = now_gmt1 - arrivee_datetime
+            minutes_depuis = diff.total_seconds() / 60
+            
+            print(f"⏱️ Minutes depuis l'arrivée: {minutes_depuis:.1f}")
+            
+            if minutes_depuis < DELAI_CONFIRMATION_MINUTES:
+                return (True, int(minutes_depuis))
+            return (False, int(minutes_depuis))
+        except Exception as e:
+            print(f"⚠️ Erreur parsing heure: {e}")
+            return (False, 0)
+    
+    # Logique de détermination:
+    # 1. Si on a 1 pointage matin (arrivée) et pas encore de sortie matin → sortie matin
+    #    (même si l'heure est >= 12h, tant qu'on est avant 13h ou qu'il manque la sortie)
+    # 2. Si on a 0 pointage matin et l'heure < 13h → arrivée matin
+    # 3. Si on a 2 pointages matin (complet) et l'heure >= 13h → session après-midi
+    # 4. Si on a 1 pointage après-midi (arrivée) → sortie après-midi
+    
+    # Cas 1: Arrivée matin manquante et heure < 13h
+    if nb_matin == 0 and current_hour < 13:
+        print(f"✅ Pas de pointage matin, heure < 13h → Arrivée matin")
+        return ("matin", "arrivee", False, "")
+    
+    # Cas 2: Arrivée matin faite, sortie matin manquante
+    if nb_matin == 1:
+        premier_pointage_matin = pointages_matin[0]
+        if premier_pointage_matin.get("type_pointage") == "arrivee":
+            # Vérifier si moins de 5 minutes depuis l'arrivée
+            needs_confirm, minutes = check_time_since_arrival(premier_pointage_matin)
+            if needs_confirm and not force_confirmation:
+                msg = f"Attention : Vous avez pointé votre arrivée il y a seulement {minutes} minute(s). Ce pointage sera enregistré comme une SORTIE. Voulez-vous confirmer ?"
+                print(f"⚠️ Confirmation requise: {msg}")
+                return ("matin", "sortie", True, msg)
+            print(f"✅ Arrivée matin faite, sortie manquante → Sortie matin")
+            return ("matin", "sortie", False, "")
+    
+    # Cas 3: Session matin complète (2 pointages)
+    if nb_matin >= 2:
+        # Vérifier la session après-midi
+        if nb_aprem == 0:
+            if current_hour >= 13:
+                print(f"✅ Matin complet, heure >= 13h, pas de pointage après-midi → Arrivée après-midi")
+                return ("apres-midi", "arrivee", False, "")
+            else:
+                # Entre 12h et 13h avec matin complet → attendre 13h
+                raise ValueError("La session du matin est terminée. La session de l'après-midi commence à 13h00.")
+        elif nb_aprem == 1:
+            premier_pointage_aprem = pointages_aprem[0]
+            if premier_pointage_aprem.get("type_pointage") == "arrivee":
+                # Vérifier si moins de 5 minutes depuis l'arrivée après-midi
+                needs_confirm, minutes = check_time_since_arrival(premier_pointage_aprem)
+                if needs_confirm and not force_confirmation:
+                    msg = f"Attention : Vous avez pointé votre arrivée il y a seulement {minutes} minute(s). Ce pointage sera enregistré comme une SORTIE. Voulez-vous confirmer ?"
+                    print(f"⚠️ Confirmation requise: {msg}")
+                    return ("apres-midi", "sortie", True, msg)
+                print(f"✅ Arrivée après-midi faite, sortie manquante → Sortie après-midi")
+                return ("apres-midi", "sortie", False, "")
+        else:
+            # 2 pointages après-midi = journée complète
+            raise ValueError("Vous avez déjà effectué tous vos pointages pour aujourd'hui (4 pointages: 2 matin + 2 après-midi).")
+    
+    # Cas 4: Pas de pointage matin mais heure >= 13h (arrivée tardive directement l'après-midi)
+    if nb_matin == 0 and current_hour >= 13:
+        if nb_aprem == 0:
+            print(f"✅ Pas de pointage matin, heure >= 13h → Arrivée après-midi (absence matin)")
+            return ("apres-midi", "arrivee", False, "")
+        elif nb_aprem == 1:
+            premier_pointage_aprem = pointages_aprem[0]
+            if premier_pointage_aprem.get("type_pointage") == "arrivee":
+                # Vérifier si moins de 5 minutes depuis l'arrivée après-midi
+                needs_confirm, minutes = check_time_since_arrival(premier_pointage_aprem)
+                if needs_confirm and not force_confirmation:
+                    msg = f"Attention : Vous avez pointé votre arrivée il y a seulement {minutes} minute(s). Ce pointage sera enregistré comme une SORTIE. Voulez-vous confirmer ?"
+                    print(f"⚠️ Confirmation requise: {msg}")
+                    return ("apres-midi", "sortie", True, msg)
+                print(f"✅ Arrivée après-midi faite → Sortie après-midi")
+                return ("apres-midi", "sortie", False, "")
+    
+    # Cas par défaut (ne devrait pas arriver)
+    raise ValueError("Impossible de déterminer le type de pointage. Veuillez contacter l'administrateur.")
+
+
+async def create_pointage(agent_id: str, qrcode: str, force_confirmation: bool = False) -> Dict[str, Any]:
     """
     Crée un nouveau pointage pour un agent
     Nouvelle logique : 4 pointages par jour
     - Matin : arrivée + sortie
     - Après-midi : arrivée + sortie
+    
+    La détermination de la session et du type de pointage est intelligente:
+    - Elle prend en compte les pointages déjà effectués
+    - Un agent qui a fait son arrivée matin aura automatiquement une sortie matin
+      même s'il pointe à 12h (pendant la pause)
+    
+    Si l'agent rescanne dans les 5 minutes après son arrivée, une confirmation est demandée.
+    Le paramètre force_confirmation permet de bypasser cette confirmation.
     """
     db = await get_db()
     
@@ -37,46 +194,29 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
     if not is_valid:
         raise ValueError("QR code invalide ou expiré")
     
-    # Déterminer la session (matin ou après-midi)
-    session = await determine_session()
-    
     # Utiliser la date GMT+1
     now_gmt1 = datetime.now(TIMEZONE)
     today = now_gmt1.date().isoformat()
     
-    print(f"🔍 Vérification des pointages existants pour l'agent {agent_id} à la date {today} et la session {session}")
-    
-    # Vérifier les pointages existants pour cette session
+    # Déterminer la session ET le type de pointage de manière intelligente
+    # en fonction des pointages déjà effectués
     try:
-        existing_pointages = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).eq("session", session).execute()
-        print(f"📊 Pointages existants: {existing_pointages.data}")
+        session, type_pointage, needs_confirmation, confirmation_message = await determine_session_for_agent(agent_id, force_confirmation)
+        print(f"🔍 Session déterminée: {session}, Type: {type_pointage}, Confirmation: {needs_confirmation}")
         
-        nb_pointages = len(existing_pointages.data) if existing_pointages.data else 0
-        print(f"📊 Nombre de pointages pour cette session: {nb_pointages}")
-        
-        # Déterminer le type de pointage (arrivée ou sortie)
-        if nb_pointages == 0:
-            type_pointage = "arrivee"
-            print(f"✅ Premier pointage de la session → Arrivée")
-        elif nb_pointages == 1:
-            # Vérifier que le premier pointage était une arrivée
-            if existing_pointages.data[0].get("type_pointage") == "arrivee":
-                type_pointage = "sortie"
-                print(f"✅ Deuxième pointage de la session → Sortie")
-            else:
-                raise ValueError(f"Erreur de cohérence dans les pointages")
-        else:
-            # Déjà 2 pointages pour cette session
-            print(f"❌ Limite atteinte: {nb_pointages} pointages pour la session {session}")
-            session_fr = "du matin" if session == "matin" else "de l'après-midi"
-            raise ValueError(f"Vous avez déjà effectué vos 2 pointages pour la session {session_fr} (arrivée et sortie). Maximum 4 pointages par jour : 2 le matin et 2 l'après-midi.")
-        
+        # Si une confirmation est requise et pas forcée, retourner sans créer le pointage
+        if needs_confirmation:
+            return {
+                "needs_confirmation": True,
+                "confirmation_message": confirmation_message,
+                "session": session,
+                "type_pointage": type_pointage
+            }
     except ValueError as ve:
-        # Re-lever les erreurs de validation
         print(f"🔴 ValueError: {str(ve)}")
         raise ve
     except Exception as e:
-        print(f"⚠️ Erreur lors de la vérification: {str(e)}")
+        print(f"⚠️ Erreur lors de la détermination de la session: {str(e)}")
         raise Exception(f"Erreur lors de la vérification des pointages: {str(e)}")
     
     # Créer le pointage avec l'heure GMT+1
@@ -111,7 +251,9 @@ async def create_pointage(agent_id: str, qrcode: str) -> Dict[str, Any]:
         "date_pointage": pointage_db["date_pointage"],
         "heure_pointage": pointage_db["heure_pointage"],
         "session": pointage_db["session"],
-        "created_at": pointage_db["created_at"]
+        "type_pointage": type_pointage,
+        "created_at": pointage_db["created_at"],
+        "needs_confirmation": False
     }
 
 
@@ -124,6 +266,9 @@ async def get_pointages_by_agent(agent_id: str, start_date: Optional[date] = Non
     try:
         print(f"Récupération des pointages pour l'agent {agent_id} du {start_date} au {end_date}")
         query = db.table("pointages").select("*").eq("agent_id", agent_id)
+        
+        # Exclure les pointages annulés
+        query = query.or_("annule.is.null,annule.eq.false")
         
         if start_date:
             query = query.gte("date_pointage", start_date.isoformat())
@@ -142,13 +287,13 @@ async def get_pointages_by_agent(agent_id: str, start_date: Optional[date] = Non
 
 async def get_pointages_by_date(date_pointage: date) -> List[Dict[str, Any]]:
     """
-    Récupère tous les pointages pour une date donnée
+    Récupère tous les pointages pour une date donnée (exclut les annulés)
     """
     db = await get_db()
     
     try:
         print(f"Récupération des pointages pour la date {date_pointage}")
-        result = db.table("pointages").select("*").eq("date_pointage", date_pointage.isoformat()).execute()
+        result = db.table("pointages").select("*").eq("date_pointage", date_pointage.isoformat()).or_("annule.is.null,annule.eq.false").execute()
         print(f"Nombre de pointages récupérés: {len(result.data) if result.data else 0}")
     except Exception as e:
         print(f"Erreur lors de la récupération des pointages par date: {str(e)}")

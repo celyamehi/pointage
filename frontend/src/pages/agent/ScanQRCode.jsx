@@ -17,8 +17,14 @@ const ScanQRCode = () => {
   const [selectedCamera, setSelectedCamera] = useState(null)
   const [permissionStatus, setPermissionStatus] = useState('checking')
   
+  // État pour la confirmation de sortie rapide (dans les 5 minutes après arrivée)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [confirmationMessage, setConfirmationMessage] = useState('')
+  const [pendingQrCode, setPendingQrCode] = useState(null)
+  
   const html5QrCodeRef = useRef(null)
   const scannerInitialized = useRef(false)
+  const scannerStopping = useRef(false)
   
   // Vérifier les permissions et détecter les caméras disponibles
   useEffect(() => {
@@ -114,9 +120,18 @@ const ScanQRCode = () => {
             setIsScanning(false)
             handleSubmitPointage(decodedText)
             
-            // Arrêter le scanner
-            if (html5QrCodeRef.current) {
-              html5QrCodeRef.current.stop().catch(err => console.error('Erreur arrêt scanner:', err))
+            // Arrêter le scanner de manière sécurisée
+            if (html5QrCodeRef.current && scannerInitialized.current && !scannerStopping.current) {
+              scannerStopping.current = true
+              html5QrCodeRef.current.stop()
+                .then(() => {
+                  scannerInitialized.current = false
+                  scannerStopping.current = false
+                })
+                .catch(err => {
+                  console.warn('Scanner déjà arrêté:', err.message)
+                  scannerStopping.current = false
+                })
             }
           },
           (errorMessage) => {
@@ -136,19 +151,26 @@ const ScanQRCode = () => {
 
     // Cleanup
     return () => {
-      if (html5QrCodeRef.current && scannerInitialized.current) {
+      if (html5QrCodeRef.current && scannerInitialized.current && !scannerStopping.current) {
+        scannerStopping.current = true
         html5QrCodeRef.current.stop()
           .then(() => {
-            html5QrCodeRef.current.clear()
+            if (html5QrCodeRef.current) {
+              html5QrCodeRef.current.clear()
+            }
             scannerInitialized.current = false
+            scannerStopping.current = false
           })
-          .catch(err => console.error('Erreur nettoyage:', err))
+          .catch(err => {
+            console.warn('Erreur nettoyage (scanner peut-être déjà arrêté):', err.message)
+            scannerStopping.current = false
+          })
       }
     }
   }, [selectedCamera, scanResult, isSubmitting, permissionStatus])
   
   // Fonction pour soumettre le pointage
-  const handleSubmitPointage = async (qrcode) => {
+  const handleSubmitPointage = async (qrcode, forceConfirmation = false) => {
     if (!qrcode || isSubmitting) return
     
     setIsSubmitting(true)
@@ -156,14 +178,24 @@ const ScanQRCode = () => {
     try {
       // Déterminer la session actuelle (matin ou après-midi)
       const currentHour = new Date().getHours()
-      const session = currentHour < 12 ? 'matin' : 'apres-midi'
+      const session = currentHour < 13 ? 'matin' : 'apres-midi'
       
       // Envoyer la requête de pointage
       const response = await api.post('/api/pointage/', {
         agent_id: user.id,
         qrcode: qrcode,
-        session: session
+        session: session,
+        force_confirmation: forceConfirmation
       })
+      
+      // Vérifier si une confirmation est requise
+      if (response.data.needs_confirmation) {
+        setConfirmationMessage(response.data.confirmation_message)
+        setPendingQrCode(qrcode)
+        setShowConfirmation(true)
+        setIsSubmitting(false)
+        return
+      }
       
       // Afficher un message de succès
       toast.success(response.data.message)
@@ -187,6 +219,30 @@ const ScanQRCode = () => {
     } finally {
       setIsSubmitting(false)
     }
+  }
+  
+  // Fonction pour confirmer le pointage de sortie rapide
+  const handleConfirmExit = async () => {
+    setShowConfirmation(false)
+    if (pendingQrCode) {
+      await handleSubmitPointage(pendingQrCode, true)
+    }
+    setPendingQrCode(null)
+    setConfirmationMessage('')
+  }
+  
+  // Fonction pour annuler le pointage de sortie rapide
+  const handleCancelExit = () => {
+    setShowConfirmation(false)
+    setPendingQrCode(null)
+    setConfirmationMessage('')
+    setScanResult(null)
+    setIsScanning(false)
+    toast.info('Pointage annulé')
+    // Redémarrer le scanner
+    scannerInitialized.current = false
+    setPermissionStatus('checking')
+    window.location.reload()
   }
   
   // Fonction pour redémarrer le scan
@@ -217,6 +273,41 @@ const ScanQRCode = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Scanner le QR Code</h1>
+      
+      {/* Modal de confirmation pour sortie rapide */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-yellow-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-4">
+              Confirmation requise
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              {confirmationMessage}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelExit}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmExit}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                Confirmer la sortie
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow-md p-6">
         {isSubmitting ? (

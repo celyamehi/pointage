@@ -11,6 +11,7 @@ class PointageBase(BaseModel):
 
 class PointageCreate(PointageBase):
     qrcode: str
+    force_confirmation: bool = False
 
 
 class Pointage(PointageBase):
@@ -23,6 +24,8 @@ class Pointage(PointageBase):
 class PointageResponse(BaseModel):
     message: str
     pointage: Optional[Pointage] = None
+    needs_confirmation: bool = False
+    confirmation_message: Optional[str] = None
 
 
 class PointageJour(BaseModel):

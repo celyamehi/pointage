@@ -13,6 +13,8 @@ const AgentDashboard = () => {
     apres_midi_sortie: null
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [jourFerie, setJourFerie] = useState(null)
+  const [hasException, setHasException] = useState(false)
   
   // Formatage de la date du jour
   const today = new Date()
@@ -28,12 +30,29 @@ const AgentDashboard = () => {
   const currentSession = currentHour < 12 ? 'matin' : 'apres-midi'
   
   useEffect(() => {
-    const fetchPointages = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/api/pointage/me')
-        
-        // Filtrer pour obtenir uniquement les pointages d'aujourd'hui
         const todayStr = today.toISOString().split('T')[0]
+        
+        // Vérifier si c'est un jour férié
+        try {
+          const jourFerieResponse = await api.get(`/api/jours-feries/check/${todayStr}`)
+          if (jourFerieResponse.data.est_ferie) {
+            setJourFerie(jourFerieResponse.data.jour_ferie)
+            
+            // Vérifier si l'agent a une exception (doit travailler)
+            if (user?.id) {
+              const exceptionsResponse = await api.get(`/api/jours-feries/agent/${user.id}/exceptions`)
+              const hasExc = exceptionsResponse.data.some(e => e.date_ferie === todayStr)
+              setHasException(hasExc)
+            }
+          }
+        } catch (err) {
+          console.log('Pas de vérification jour férié disponible')
+        }
+        
+        // Récupérer les pointages
+        const response = await api.get('/api/pointage/me')
         const todayPointage = response.data.find(p => p.date === todayStr)
         
         if (todayPointage) {
@@ -52,8 +71,8 @@ const AgentDashboard = () => {
       }
     }
     
-    fetchPointages()
-  }, [])
+    fetchData()
+  }, [user])
   
   return (
     <div>
@@ -63,6 +82,32 @@ const AgentDashboard = () => {
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Bienvenue, {user?.nom} !</h2>
         <p className="text-gray-600 mb-2">Aujourd'hui : {formattedDate}</p>
       </div>
+
+      {/* Bannière jour férié */}
+      {jourFerie && !hasException && (
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-md p-6 mb-6 text-white">
+          <div className="flex items-center">
+            <span className="text-4xl mr-4">🎉</span>
+            <div>
+              <h2 className="text-xl font-bold">{jourFerie.nom}</h2>
+              <p className="text-purple-100">Aujourd'hui est un jour férié ! Pas besoin de pointer.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bannière jour férié avec exception (doit travailler) */}
+      {jourFerie && hasException && (
+        <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-lg shadow-md p-6 mb-6 text-white">
+          <div className="flex items-center">
+            <span className="text-4xl mr-4">👷</span>
+            <div>
+              <h2 className="text-xl font-bold">{jourFerie.nom} - Jour travaillé</h2>
+              <p className="text-orange-100">Vous êtes programmé pour travailler aujourd'hui. N'oubliez pas de pointer !</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Pointages d'aujourd'hui</h2>

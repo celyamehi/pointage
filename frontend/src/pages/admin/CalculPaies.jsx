@@ -472,6 +472,41 @@ const CalculPaies = () => {
                     <span className="font-semibold">+ {formatMontant(selectedAgent.frais_transport_total)}</span>
                   </div>
                   
+                  {/* Bonus jours fériés travaillés */}
+                  {selectedAgent.bonus_jours_feries > 0 && (
+                    <div className="bg-purple-50 p-3 rounded-lg mt-3">
+                      <div className="flex justify-between items-center text-purple-700 font-semibold">
+                        <div>
+                          <span>🎉 Bonus jours fériés travaillés</span>
+                          <p className="text-xs text-purple-600 mt-1">
+                            {selectedAgent.jours_feries_travailles} jour(s) × {(selectedAgent.taux_horaire * 8) + 500 + 200} DA (salaire + panier + transport)
+                          </p>
+                        </div>
+                        <span>+ {formatMontant(selectedAgent.bonus_jours_feries)}</span>
+                      </div>
+                      {selectedAgent.details_jours_feries && selectedAgent.details_jours_feries.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {selectedAgent.details_jours_feries.map((jf, index) => (
+                            <div key={index} className="text-xs text-purple-600 flex justify-between">
+                              <span>🗓️ {new Date(jf.date).toLocaleDateString('fr-FR')} - {jf.nom}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Jours fériés payés (sans travail) */}
+                  {selectedAgent.jours_feries_payes > 0 && (
+                    <div className="bg-indigo-50 p-3 rounded-lg mt-3">
+                      <div className="flex justify-between items-center text-indigo-700">
+                        <span>📅 Jours fériés payés (repos)</span>
+                        <span className="font-semibold">{selectedAgent.jours_feries_payes} jour(s)</span>
+                      </div>
+                      <p className="text-xs text-indigo-600 mt-1">Inclus dans les jours travaillés</p>
+                    </div>
+                  )}
+                  
                   <div className="border-t-2 border-gray-300 pt-3 mt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Salaire net</span>

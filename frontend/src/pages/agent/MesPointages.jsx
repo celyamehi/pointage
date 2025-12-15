@@ -7,6 +7,7 @@ const MesPointages = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [joursFeries, setJoursFeries] = useState({})
   
   // Initialiser les dates par défaut (semaine en cours)
   useEffect(() => {
@@ -34,14 +35,15 @@ const MesPointages = () => {
     return `${day}/${month}/${year}`
   }
   
-  // Récupérer les pointages
+  // Récupérer les pointages et les jours fériés
   useEffect(() => {
-    const fetchPointages = async () => {
+    const fetchData = async () => {
       if (!startDate || !endDate) return
       
       setIsLoading(true)
       
       try {
+        // Récupérer les pointages
         const response = await api.get('/api/pointage/me', {
           params: {
             start_date: startDate,
@@ -50,6 +52,19 @@ const MesPointages = () => {
         })
         
         setPointages(response.data)
+        
+        // Récupérer les jours fériés pour la période
+        try {
+          const year = new Date(startDate).getFullYear()
+          const jfResponse = await api.get(`/api/jours-feries/annee/${year}`)
+          const jfMap = {}
+          jfResponse.data.forEach(jf => {
+            jfMap[jf.date_ferie] = jf.nom
+          })
+          setJoursFeries(jfMap)
+        } catch (err) {
+          console.log('Pas de jours fériés disponibles')
+        }
       } catch (error) {
         console.error('Erreur lors de la récupération des pointages:', error)
         toast.error('Erreur lors de la récupération des pointages')
@@ -58,7 +73,7 @@ const MesPointages = () => {
       }
     }
     
-    fetchPointages()
+    fetchData()
   }, [startDate, endDate])
   
   // Gérer la soumission du formulaire de filtrage
@@ -157,41 +172,57 @@ const MesPointages = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {pointages.map((pointage, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatDateForDisplay(pointage.date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.matin_arrivee ? (
-                        <span className="text-green-600 font-semibold">✓ {pointage.matin_arrivee}</span>
+                {pointages.map((pointage, index) => {
+                  const isJourFerie = joursFeries[pointage.date]
+                  return (
+                    <tr key={index} className={isJourFerie ? 'bg-purple-50' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <div>{formatDateForDisplay(pointage.date)}</div>
+                        {isJourFerie && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                            🎉 {isJourFerie}
+                          </span>
+                        )}
+                      </td>
+                      {isJourFerie && !pointage.matin_arrivee && !pointage.matin_sortie && !pointage.apres_midi_arrivee && !pointage.apres_midi_sortie ? (
+                        <td colSpan="4" className="px-6 py-4 text-center text-sm text-purple-600 font-medium">
+                          Jour férié - Pas de pointage requis
+                        </td>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pointage.matin_arrivee ? (
+                              <span className="text-green-600 font-semibold">✓ {pointage.matin_arrivee}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pointage.matin_sortie ? (
+                              <span className="text-blue-600 font-semibold">✓ {pointage.matin_sortie}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pointage.apres_midi_arrivee ? (
+                              <span className="text-green-600 font-semibold">✓ {pointage.apres_midi_arrivee}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pointage.apres_midi_sortie ? (
+                              <span className="text-blue-600 font-semibold">✓ {pointage.apres_midi_sortie}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.matin_sortie ? (
-                        <span className="text-blue-600 font-semibold">✓ {pointage.matin_sortie}</span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.apres_midi_arrivee ? (
-                        <span className="text-green-600 font-semibold">✓ {pointage.apres_midi_arrivee}</span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {pointage.apres_midi_sortie ? (
-                        <span className="text-blue-600 font-semibold">✓ {pointage.apres_midi_sortie}</span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

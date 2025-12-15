@@ -35,6 +35,8 @@ const DashboardLayout = ({ isAdmin = false }) => {
     { name: 'Gestion des Agents', to: '/admin/agents', icon: 'users' },
     { name: 'QR Code', to: '/admin/qrcode', icon: 'qrcode' },
     { name: 'Pointages', to: '/admin/pointages-detailles', icon: 'list' },
+    { name: 'Gestion Pointages', to: '/admin/gestion-pointages', icon: 'edit' },
+    { name: 'Jours Fériés', to: '/admin/jours-feries', icon: 'calendar-alt' },
     { name: 'Calcul des Paies', to: '/admin/paies', icon: 'money-bill-wave' },
     { name: 'Gestion des Primes', to: '/admin/primes', icon: 'gift' },
   ]

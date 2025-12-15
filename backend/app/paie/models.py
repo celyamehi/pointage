@@ -32,6 +32,8 @@ class CalculPaie(BaseModel):
     # Jours (peuvent être des demi-journées, ex: 0.5 pour absence partielle)
     jours_travailles: float
     jours_absence: float
+    jours_feries_payes: int = 0  # Jours fériés payés (sans travail)
+    jours_feries_travailles: int = 0  # Jours fériés travaillés (payés double)
     
     # Calculs financiers
     salaire_base: float
@@ -39,6 +41,7 @@ class CalculPaie(BaseModel):
     deduction_retards: float
     frais_panier_total: float
     frais_transport_total: float
+    bonus_jours_feries: float = 0.0  # Bonus pour jours fériés travaillés (double journée)
     salaire_net: float
     primes_total: float = 0.0  # Total des primes
     retenues_9_pourcent: float  # 9% du salaire de base
@@ -51,6 +54,7 @@ class CalculPaie(BaseModel):
     details_absences: Optional[list] = []
     details_retards: Optional[list] = []
     details_primes: Optional[list] = []  # Liste des primes
+    details_jours_feries: Optional[list] = []  # Liste des jours fériés travaillés
 
 
 class PeriodePaie(BaseModel):

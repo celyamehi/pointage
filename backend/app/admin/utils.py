@@ -59,9 +59,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
         except Exception as e:
             admin_id = None
         
-        # Pointages du matin
+        # Pointages du matin (exclure les annulés)
         try:
-            pointages_matin_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "matin").execute()
+            pointages_matin_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "matin").or_("annule.is.null,annule.eq.false").execute()
             pointages_matin = len(pointages_matin_result.data) if pointages_matin_result.data else 0
             
             # Dictionnaire pour suivre l'état des agents: True = présent, False = sorti
@@ -97,9 +97,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
             agents_presents_matin = set()
             arrivees_matin = 0
         
-        # Pointages de l'après-midi
+        # Pointages de l'après-midi (exclure les annulés)
         try:
-            pointages_aprem_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "apres-midi").execute()
+            pointages_aprem_result = db.table("pointages").select("*").eq("date_pointage", today).eq("session", "apres-midi").or_("annule.is.null,annule.eq.false").execute()
             pointages_aprem = len(pointages_aprem_result.data) if pointages_aprem_result.data else 0
             
             # Dictionnaire pour suivre l'état des agents: True = présent, False = sorti

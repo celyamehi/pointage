@@ -85,7 +85,8 @@ const MonSuivi = () => {
       'Présent': 'bg-green-100 text-green-800',
       'Retard': 'bg-yellow-100 text-yellow-800',
       'Absence partielle': 'bg-orange-100 text-orange-800',
-      'Absent': 'bg-red-100 text-red-800'
+      'Absent': 'bg-red-100 text-red-800',
+      'Jour férié': 'bg-purple-100 text-purple-800'
     }
     return badges[statut] || 'bg-gray-100 text-gray-800'
   }
@@ -233,15 +234,20 @@ const MonSuivi = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {suiviData.details_quotidiens.map((jour) => (
-                    <tr key={jour.date} className="hover:bg-gray-50">
+                    <tr key={jour.date} className={`hover:bg-gray-50 ${jour.est_jour_ferie ? 'bg-purple-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {formatDate(jour.date)}
                         </div>
+                        {jour.est_jour_ferie && jour.jour_ferie_nom && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                            🎉 {jour.jour_ferie_nom}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatutBadge(jour.statut)}`}>
-                          {jour.statut}
+                          {jour.est_jour_ferie ? '🎉 ' : ''}{jour.statut}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">

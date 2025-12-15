@@ -18,32 +18,78 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     db = await get_db()
     
     try:
-        # Récupérer tous les pointages de l'agent pour la période
+        # Récupérer les jours fériés de la période
+        jours_feries_response = db.table("jours_feries").select("date_ferie, nom").gte("date_ferie", start_date.isoformat()).lte("date_ferie", end_date.isoformat()).execute()
+        jours_feries_dict = {jf["date_ferie"]: jf["nom"] for jf in (jours_feries_response.data or [])}
+        print(f"📅 Jours fériés trouvés: {len(jours_feries_dict)}")
+        
+        # Récupérer les exceptions pour cet agent (jours fériés où il travaille)
+        exceptions_response = db.table("jours_feries_exceptions").select("jour_ferie_id, jours_feries(date_ferie)").eq("agent_id", agent_id).execute()
+        exceptions_dates = set()
+        for exc in (exceptions_response.data or []):
+            if exc.get("jours_feries") and exc["jours_feries"].get("date_ferie"):
+                exceptions_dates.add(exc["jours_feries"]["date_ferie"])
+        print(f"📋 Exceptions agent: {len(exceptions_dates)} jours fériés travaillés")
+        
+        # Récupérer tous les pointages de l'agent pour la période (exclure les annulés)
         print(f"📊 Récupération des pointages pour agent {agent_id} du {start_date} au {end_date}")
-        result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", start_date.isoformat()).lte("date_pointage", end_date.isoformat()).execute()
+        result = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", start_date.isoformat()).lte("date_pointage", end_date.isoformat()).or_("annule.is.null,annule.eq.false").execute()
         
         print(f"✅ {len(result.data) if result.data else 0} pointages récupérés")
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des pointages: {str(e)}")
         # Retourner une liste vide en cas d'erreur pour éviter de bloquer
         result = type('obj', (object,), {'data': None})()
+        jours_feries_dict = {}
+        exceptions_dates = set()
     
     if not result.data:
         print("ℹ️ Aucun pointage trouvé pour cette période")
-        # Retourner quand même les jours avec statut "Absent"
+        # Retourner quand même les jours avec statut "Absent" (sauf jours fériés)
         tracking_data = []
         current_date = start_date
         
         while current_date <= end_date:
+            date_str = current_date.isoformat()
+            
+            # Vérifier si c'est un jour férié (sauf si l'agent a une exception)
+            if date_str in jours_feries_dict and date_str not in exceptions_dates:
+                tracking_data.append({
+                    "date": date_str,
+                    "jour_semaine": current_date.strftime("%A"),
+                    "statut": "Jour férié",
+                    "jour_ferie_nom": jours_feries_dict[date_str],
+                    "est_jour_ferie": True,
+                    "retard_matin_minutes": 0,
+                    "retard_apres_midi_minutes": 0,
+                    "retard_total_minutes": 0,
+                    "retard_total_heures": 0,
+                    "est_absent": False,
+                    "absent_matin": False,
+                    "absent_apres_midi": False,
+                    "montant_retard": 0,
+                    "montant_absence": 0,
+                    "montant_total_deduit": 0,
+                    "pointages": {
+                        "matin_arrivee": None,
+                        "matin_sortie": None,
+                        "apres_midi_arrivee": None,
+                        "apres_midi_sortie": None
+                    }
+                })
+                current_date += timedelta(days=1)
+                continue
+            
             # Absence complète : 8h × 182,18 DA + 200 DA + 500 DA
             montant_absence_base = round(HEURES_PAR_JOUR * TAUX_HORAIRE, 2)
             frais_supplementaires = 700  # 200 + 500
             montant_total = montant_absence_base + frais_supplementaires
             
             tracking_data.append({
-                "date": current_date.isoformat(),
+                "date": date_str,
                 "jour_semaine": current_date.strftime("%A"),
                 "statut": "Absent",
+                "est_jour_ferie": False,
                 "retard_matin_minutes": 0,
                 "retard_apres_midi_minutes": 0,
                 "retard_total_minutes": 0,
@@ -101,6 +147,35 @@ async def get_agent_daily_tracking(agent_id: str, start_date: date, end_date: da
     
     while current_date <= end_date:
         date_str = current_date.isoformat()
+        
+        # Vérifier si c'est un jour férié (sauf si l'agent a une exception)
+        if date_str in jours_feries_dict and date_str not in exceptions_dates:
+            tracking_data.append({
+                "date": date_str,
+                "jour_semaine": current_date.strftime("%A"),
+                "statut": "Jour férié",
+                "jour_ferie_nom": jours_feries_dict[date_str],
+                "est_jour_ferie": True,
+                "retard_matin_minutes": 0,
+                "retard_apres_midi_minutes": 0,
+                "retard_total_minutes": 0,
+                "retard_total_heures": 0,
+                "est_absent": False,
+                "absent_matin": False,
+                "absent_apres_midi": False,
+                "montant_retard": 0,
+                "montant_absence": 0,
+                "montant_total_deduit": 0,
+                "pointages": {
+                    "matin_arrivee": None,
+                    "matin_sortie": None,
+                    "apres_midi_arrivee": None,
+                    "apres_midi_sortie": None
+                }
+            })
+            current_date += timedelta(days=1)
+            continue
+        
         jour_data = pointages_par_date.get(date_str, {
             "matin_arrivee": None,
             "matin_sortie": None,

@@ -132,8 +132,23 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     
     logger.info(f"Calcul de paie pour {agent['nom']} ({role}) - {mois}/{annee} (jusqu'au {dernier_jour})")
     
-    # Récupérer tous les pointages du mois
-    pointages_response = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", premier_jour.isoformat()).lte("date_pointage", dernier_jour.isoformat()).order("date_pointage").execute()
+    # Récupérer les jours fériés du mois
+    jours_feries_response = db.table("jours_feries").select("id, date_ferie, nom").gte("date_ferie", premier_jour.isoformat()).lte("date_ferie", dernier_jour.isoformat()).execute()
+    jours_feries_set = set(jf["date_ferie"] for jf in (jours_feries_response.data or []))
+    jours_feries_ids = {jf["date_ferie"]: jf["id"] for jf in (jours_feries_response.data or [])}
+    jours_feries_noms = {jf["date_ferie"]: jf["nom"] for jf in (jours_feries_response.data or [])}
+    logger.info(f"Jours fériés trouvés pour {mois}/{annee}: {len(jours_feries_set)}")
+    
+    # Récupérer les exceptions pour cet agent (jours fériés où il travaille)
+    exceptions_response = db.table("jours_feries_exceptions").select("jour_ferie_id, jours_feries(date_ferie)").eq("agent_id", agent_id).execute()
+    exceptions_dates = set()
+    for exc in (exceptions_response.data or []):
+        if exc.get("jours_feries") and exc["jours_feries"].get("date_ferie"):
+            exceptions_dates.add(exc["jours_feries"]["date_ferie"])
+    logger.info(f"Exceptions pour agent {agent_id}: {len(exceptions_dates)} jours fériés travaillés")
+    
+    # Récupérer tous les pointages du mois (exclure les annulés)
+    pointages_response = db.table("pointages").select("*").eq("agent_id", agent_id).gte("date_pointage", premier_jour.isoformat()).lte("date_pointage", dernier_jour.isoformat()).or_("annule.is.null,annule.eq.false").order("date_pointage").execute()
     
     pointages = pointages_response.data if pointages_response.data else []
     
@@ -165,12 +180,19 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                 pointages_par_date[date_p]["apres_midi_sortie"] = heure
     
     # Calculer les jours ouvrés du mois (exclure samedi et dimanche)
+    # Les jours fériés sont PAYÉS, donc ils comptent comme jours ouvrés
     jours_ouvres = 0
+    jours_feries_en_semaine = 0  # Jours fériés qui tombent en semaine (payés)
     current_date = premier_jour
     while current_date <= dernier_jour:
+        date_str = current_date.isoformat()
         if current_date.weekday() < 5:  # Lundi=0, Vendredi=4
             jours_ouvres += 1
+            if date_str in jours_feries_set:
+                jours_feries_en_semaine += 1
         current_date += timedelta(days=1)
+    
+    logger.info(f"Jours ouvrés: {jours_ouvres}, Jours fériés (en semaine, payés): {jours_feries_en_semaine}, Exceptions (travaillés): {len(exceptions_dates)}")
     
     # Analyser chaque jour
     jours_travailles = 0
@@ -179,15 +201,30 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     heures_retard_total = 0.0
     details_absences = []
     details_retards = []
+    jours_feries_travailles = 0  # Jours fériés où l'agent a travaillé (payés double)
+    jours_feries_payes = 0  # Jours fériés payés sans travail
+    details_jours_feries = []  # Détails des jours fériés travaillés
     
     current_date = premier_jour
     while current_date <= dernier_jour:
-        # Ne compter que les jours ouvrés
+        date_str = current_date.isoformat()
+        
+        # Ne compter que les jours ouvrés (exclure samedi et dimanche)
         if current_date.weekday() >= 5:  # Samedi ou dimanche
             current_date += timedelta(days=1)
             continue
         
-        date_str = current_date.isoformat()
+        # Jour férié : payé normalement, pas besoin de pointer
+        # SAUF si l'agent a une exception (doit travailler)
+        if date_str in jours_feries_set and date_str not in exceptions_dates:
+            # Jour férié payé sans travail
+            jours_travailles += 1  # Compté comme jour travaillé (payé)
+            jours_feries_payes += 1
+            current_date += timedelta(days=1)
+            continue
+        
+        # Vérifier si c'est un jour férié avec exception (agent doit travailler)
+        est_jour_ferie_travaille = date_str in jours_feries_set and date_str in exceptions_dates
         
         if date_str in pointages_par_date:
             jour_data = pointages_par_date[date_str]
@@ -205,6 +242,18 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
             print(f"📅 {date_str}: matin_arr={jour_data.get('matin_arrivee')}, matin_sort={jour_data.get('matin_sortie')}, "
                   f"apm_arr={jour_data.get('apres_midi_arrivee')}, apm_sort={jour_data.get('apres_midi_sortie')}")
             print(f"   → Absent matin: {absent_matin}, Absent après-midi: {absent_apres_midi}, Absence complète: {absence_complete}")
+            print(f"   → Jour férié travaillé: {est_jour_ferie_travaille}")
+            
+            # Si jour férié travaillé et présent, compter comme double journée
+            if est_jour_ferie_travaille and not absence_complete:
+                jours_feries_travailles += 1
+                nom_jour_ferie = jours_feries_noms.get(date_str, "Jour férié")
+                details_jours_feries.append({
+                    "date": date_str,
+                    "nom": nom_jour_ferie,
+                    "type": "travaille"
+                })
+                print(f"   🎉 BONUS: Jour férié travaillé ({nom_jour_ferie}) - sera payé double!")
             
             if absence_complete:
                 # Absence complète
@@ -394,8 +443,18 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
     deduction_absences = 0  # Les absences sont déjà dans heures_travaillees
     deduction_retards = 0  # Les retards sont déjà dans heures_travaillees
     
-    # Salaire net = Salaire de base + Frais
-    salaire_net = salaire_base + frais_panier_total + frais_transport_total
+    # BONUS JOURS FÉRIÉS TRAVAILLÉS : payés double (1 journée supplémentaire par jour férié travaillé)
+    # Le jour est déjà compté dans jours_travailles, donc on ajoute 1 journée de bonus
+    # Journée complète = salaire horaire × 8h + frais panier + frais transport
+    salaire_journee_complet = (params.taux_horaire * params.heures_par_jour) + params.frais_panier + params.frais_transport
+    # 182.18 × 8 + 500 + 200 = 1457.44 + 700 = 2157.44 DA
+    bonus_jours_feries = jours_feries_travailles * salaire_journee_complet
+    
+    if jours_feries_travailles > 0:
+        logger.info(f"   🎉 BONUS Jours fériés travaillés: {jours_feries_travailles} jour(s) × {salaire_journee_complet} DA = {bonus_jours_feries} DA")
+    
+    # Salaire net = Salaire de base + Frais + Bonus jours fériés
+    salaire_net = salaire_base + frais_panier_total + frais_transport_total + bonus_jours_feries
     
     # Récupérer les primes pour ce mois
     primes_response = db.table("primes").select("*").eq("agent_id", agent_id).eq("mois", mois).eq("annee", annee).execute()
@@ -434,11 +493,14 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         heures_retard=round(heures_retard_total, 2),
         jours_travailles=jours_travailles,
         jours_absence=jours_absence,
+        jours_feries_payes=jours_feries_payes,
+        jours_feries_travailles=jours_feries_travailles,
         salaire_base=round(salaire_base, 2),
         deduction_absences=round(deduction_absences, 2),
         deduction_retards=round(deduction_retards, 2),
         frais_panier_total=round(frais_panier_total, 2),
         frais_transport_total=round(frais_transport_total, 2),
+        bonus_jours_feries=round(bonus_jours_feries, 2),
         salaire_net=round(salaire_net, 2),
         primes_total=round(primes_total, 2),
         retenues_9_pourcent=round(retenues_9_pourcent, 2),
@@ -448,7 +510,8 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
         taux_horaire=params.taux_horaire,
         details_absences=details_absences,
         details_retards=details_retards,
-        details_primes=details_primes
+        details_primes=details_primes,
+        details_jours_feries=details_jours_feries
     )
 
 

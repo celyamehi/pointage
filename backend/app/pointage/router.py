@@ -11,10 +11,14 @@ from app.pointage.suivi_utils import get_agent_daily_tracking
 router = APIRouter()
 
 
-@router.post("/", response_model=PointageResponse)
+@router.post("/")
 async def enregistrer_pointage(pointage: PointageCreate, current_user: User = Depends(get_current_active_user)):
     """
     Endpoint pour enregistrer un pointage
+    
+    Si l'agent rescanne dans les 5 minutes après son arrivée (matin ou après-midi),
+    le système retourne needs_confirmation=True avec un message de confirmation.
+    L'agent doit alors renvoyer la requête avec force_confirmation=True pour valider.
     """
     # Vérifier que l'agent pointe pour lui-même
     if str(current_user.id) != str(pointage.agent_id):
@@ -24,10 +28,29 @@ async def enregistrer_pointage(pointage: PointageCreate, current_user: User = De
         )
     
     try:
-        pointage_data = await create_pointage(str(pointage.agent_id), pointage.qrcode)
+        pointage_data = await create_pointage(
+            str(pointage.agent_id), 
+            pointage.qrcode, 
+            force_confirmation=pointage.force_confirmation
+        )
+        
+        # Si une confirmation est requise, retourner le message sans créer le pointage
+        if pointage_data.get("needs_confirmation"):
+            return {
+                "message": pointage_data["confirmation_message"],
+                "pointage": None,
+                "needs_confirmation": True,
+                "confirmation_message": pointage_data["confirmation_message"]
+            }
+        
+        # Pointage créé avec succès
+        type_fr = "Arrivée" if pointage_data.get("type_pointage") == "arrivee" else "Sortie"
+        session_fr = "du matin" if pointage_data["session"] == "matin" else "de l'après-midi"
         return {
-            "message": f"Pointage enregistré avec succès pour la session {pointage_data['session']}",
-            "pointage": pointage_data
+            "message": f"{type_fr} {session_fr} enregistrée avec succès",
+            "pointage": pointage_data,
+            "needs_confirmation": False,
+            "confirmation_message": None
         }
     except ValueError as e:
         raise HTTPException(
