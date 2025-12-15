@@ -9,6 +9,13 @@ const GestionPointages = () => {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
   const [activeTab, setActiveTab] = useState('pointages') // 'pointages' ou 'logs'
   
+  // États pour les filtres
+  const [filterDateDebut, setFilterDateDebut] = useState('')
+  const [filterDateFin, setFilterDateFin] = useState('')
+  const [filterAgent, setFilterAgent] = useState('')
+  const [filterSession, setFilterSession] = useState('')
+  const [agents, setAgents] = useState([]) // Pour la liste déroulante des agents
+  
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -18,13 +25,29 @@ const GestionPointages = () => {
   const [justification, setJustification] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Récupérer les pointages
+  // Récupérer les agents
+  const fetchAgents = async () => {
+    try {
+      const response = await api.get('/api/admin/agents')
+      setAgents(response.data || [])
+    } catch (error) {
+      console.error('Erreur:', error)
+    }
+  }
+
+  // Récupérer les pointages avec filtres
   const fetchPointages = async () => {
     setIsLoading(true)
     try {
-      const response = await api.get('/api/admin/historique-pointages', {
-        params: { limit: 100 }
-      })
+      const params = { limit: 100 }
+      
+      // Ajouter les filtres aux paramètres
+      if (filterDateDebut) params.date_debut = filterDateDebut
+      if (filterDateFin) params.date_fin = filterDateFin
+      if (filterAgent) params.agent_id = filterAgent
+      if (filterSession) params.session = filterSession
+      
+      const response = await api.get('/api/admin/historique-pointages', { params })
       setPointages(response.data.pointages || [])
     } catch (error) {
       console.error('Erreur:', error)
@@ -51,6 +74,7 @@ const GestionPointages = () => {
   }
 
   useEffect(() => {
+    fetchAgents()
     fetchPointages()
   }, [])
 
@@ -59,6 +83,11 @@ const GestionPointages = () => {
       fetchAuditLogs()
     }
   }, [activeTab])
+
+  // Rafraîchir les pointages quand les filtres changent
+  useEffect(() => {
+    fetchPointages()
+  }, [filterDateDebut, filterDateFin, filterAgent, filterSession])
 
   // Ouvrir le modal de modification
   const openEditModal = (pointage) => {
@@ -223,8 +252,94 @@ const GestionPointages = () => {
       {/* Contenu des onglets */}
       {activeTab === 'pointages' ? (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Filtres */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Filtre date début */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date début
+                </label>
+                <input
+                  type="date"
+                  value={filterDateDebut}
+                  onChange={(e) => setFilterDateDebut(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              
+              {/* Filtre date fin */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date fin
+                </label>
+                <input
+                  type="date"
+                  value={filterDateFin}
+                  onChange={(e) => setFilterDateFin(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              
+              {/* Filtre agent */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Agent
+                </label>
+                <select
+                  value={filterAgent}
+                  onChange={(e) => setFilterAgent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Tous les agents</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Filtre session */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Session
+                </label>
+                <select
+                  value={filterSession}
+                  onChange={(e) => setFilterSession(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Toutes les sessions</option>
+                  <option value="matin">Matin</option>
+                  <option value="apres_midi">Après-midi</option>
+                </select>
+              </div>
+              
+              {/* Bouton réinitialiser */}
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setFilterDateDebut('')
+                    setFilterDateFin('')
+                    setFilterAgent('')
+                    setFilterSession('')
+                  }}
+                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  🔄 Réinitialiser
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-700">Liste des pointages</h2>
+            <h2 className="text-lg font-semibold text-gray-700">
+              Liste des pointages 
+              <span className="text-sm text-gray-500 ml-2">
+                ({pointages.length} résultat{pointages.length > 1 ? 's' : ''})
+              </span>
+            </h2>
             <button
               onClick={fetchPointages}
               className="btn btn-secondary text-sm"

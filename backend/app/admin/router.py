@@ -62,18 +62,34 @@ async def get_agents_pointages(
 async def get_historique_pointages(
     limit: int = Query(100, description="Nombre maximum de pointages à récupérer"),
     offset: int = Query(0, description="Décalage pour la pagination"),
+    date_debut: Optional[str] = Query(None, description="Date de début (YYYY-MM-DD)"),
+    date_fin: Optional[str] = Query(None, description="Date de fin (YYYY-MM-DD)"),
+    agent_id: Optional[str] = Query(None, description="ID de l'agent"),
+    session: Optional[str] = Query(None, description="Session (matin ou apres_midi)"),
     current_user: User = Depends(get_admin_user)
 ):
     """
-    Endpoint pour récupérer l'historique complet des pointages (admin uniquement)
+    Endpoint pour récupérer l'historique complet des pointages avec filtres (admin uniquement)
     """
     try:
         from app.db import get_db
         db = await get_db()
         
-        # Récupérer les pointages avec les informations des agents
-        # Spécifier explicitement la relation car il y a deux FK vers agents (agent_id et annule_par)
-        result = db.table("pointages").select("*, agents!pointages_agent_id_fkey(nom, email)").order("date_pointage", desc=True).order("heure_pointage", desc=True).limit(limit).range(offset, offset + limit - 1).execute()
+        # Construire la requête avec les filtres
+        query = db.table("pointages").select("*, agents!pointages_agent_id_fkey(nom, email)")
+        
+        # Appliquer les filtres
+        if date_debut:
+            query = query.gte("date_pointage", date_debut)
+        if date_fin:
+            query = query.lte("date_pointage", date_fin)
+        if agent_id:
+            query = query.eq("agent_id", agent_id)
+        if session:
+            query = query.eq("session", session)
+        
+        # Exécuter la requête avec tri et pagination
+        result = query.order("date_pointage", desc=True).order("heure_pointage", desc=True).limit(limit).range(offset, offset + limit - 1).execute()
         
         return {
             "pointages": result.data if result.data else [],
