@@ -108,10 +108,31 @@ async def determine_session_for_agent(agent_id: str, force_confirmation: bool = 
     # 3. Si on a 2 pointages matin (complet) et l'heure >= 13h → session après-midi
     # 4. Si on a 1 pointage après-midi (arrivée) → sortie après-midi
     
-    # Cas 1: Arrivée matin manquante et heure < 13h
-    if nb_matin == 0 and current_hour < 13:
-        print(f"✅ Pas de pointage matin, heure < 13h → Arrivée matin")
-        return ("matin", "arrivee", False, "")
+    # Cas 1: Arrivée matin manquante
+    # Si l'agent n'a pas pointé le matin et qu'il est entre 12h30 et 13h, 
+    # on considère qu'il est absent le matin et on l'enregistre directement en après-midi
+    if nb_matin == 0:
+        if current_hour < 12 or (current_hour == 12 and current_minute < 30):
+            # Avant 12h30 → pointage matin
+            print(f"✅ Pas de pointage matin, heure < 12h30 → Arrivée matin")
+            return ("matin", "arrivee", False, "")
+        else:
+            # À partir de 12h30 sans pointage matin → considéré absent le matin, pointage après-midi
+            if nb_aprem == 0:
+                print(f"✅ Pas de pointage matin, heure >= 12h30 → Arrivée après-midi (absent matin)")
+                return ("apres-midi", "arrivee", False, "")
+            elif nb_aprem == 1:
+                premier_pointage_aprem = pointages_aprem[0]
+                if premier_pointage_aprem.get("type_pointage") == "arrivee":
+                    needs_confirm, minutes = check_time_since_arrival(premier_pointage_aprem)
+                    if needs_confirm and not force_confirmation:
+                        msg = f"Attention : Vous avez pointé votre arrivée il y a seulement {minutes} minute(s). Ce pointage sera enregistré comme une SORTIE. Voulez-vous confirmer ?"
+                        print(f"⚠️ Confirmation requise: {msg}")
+                        return ("apres-midi", "sortie", True, msg)
+                    print(f"✅ Arrivée après-midi faite → Sortie après-midi")
+                    return ("apres-midi", "sortie", False, "")
+            else:
+                raise ValueError("Vous avez déjà effectué tous vos pointages pour aujourd'hui.")
     
     # Cas 2: Arrivée matin faite, sortie matin manquante
     if nb_matin == 1:
@@ -130,12 +151,13 @@ async def determine_session_for_agent(agent_id: str, force_confirmation: bool = 
     if nb_matin >= 2:
         # Vérifier la session après-midi
         if nb_aprem == 0:
-            if current_hour >= 13:
-                print(f"✅ Matin complet, heure >= 13h, pas de pointage après-midi → Arrivée après-midi")
+            # Permettre le pointage après-midi à partir de 12h30 si matin complet
+            if current_hour >= 13 or (current_hour == 12 and current_minute >= 30):
+                print(f"✅ Matin complet, heure >= 12h30, pas de pointage après-midi → Arrivée après-midi")
                 return ("apres-midi", "arrivee", False, "")
             else:
-                # Entre 12h et 13h avec matin complet → attendre 13h
-                raise ValueError("La session du matin est terminée. La session de l'après-midi commence à 13h00.")
+                # Avant 12h30 avec matin complet → attendre 12h30
+                raise ValueError("La session du matin est terminée. Vous pouvez pointer l'après-midi à partir de 12h30.")
         elif nb_aprem == 1:
             premier_pointage_aprem = pointages_aprem[0]
             if premier_pointage_aprem.get("type_pointage") == "arrivee":
@@ -150,23 +172,6 @@ async def determine_session_for_agent(agent_id: str, force_confirmation: bool = 
         else:
             # 2 pointages après-midi = journée complète
             raise ValueError("Vous avez déjà effectué tous vos pointages pour aujourd'hui (4 pointages: 2 matin + 2 après-midi).")
-    
-    # Cas 4: Pas de pointage matin mais heure >= 13h (arrivée tardive directement l'après-midi)
-    if nb_matin == 0 and current_hour >= 13:
-        if nb_aprem == 0:
-            print(f"✅ Pas de pointage matin, heure >= 13h → Arrivée après-midi (absence matin)")
-            return ("apres-midi", "arrivee", False, "")
-        elif nb_aprem == 1:
-            premier_pointage_aprem = pointages_aprem[0]
-            if premier_pointage_aprem.get("type_pointage") == "arrivee":
-                # Vérifier si moins de 5 minutes depuis l'arrivée après-midi
-                needs_confirm, minutes = check_time_since_arrival(premier_pointage_aprem)
-                if needs_confirm and not force_confirmation:
-                    msg = f"Attention : Vous avez pointé votre arrivée il y a seulement {minutes} minute(s). Ce pointage sera enregistré comme une SORTIE. Voulez-vous confirmer ?"
-                    print(f"⚠️ Confirmation requise: {msg}")
-                    return ("apres-midi", "sortie", True, msg)
-                print(f"✅ Arrivée après-midi faite → Sortie après-midi")
-                return ("apres-midi", "sortie", False, "")
     
     # Cas par défaut (ne devrait pas arriver)
     raise ValueError("Impossible de déterminer le type de pointage. Veuillez contacter l'administrateur.")

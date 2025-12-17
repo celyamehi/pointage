@@ -242,6 +242,10 @@ const GestionAgents = () => {
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                           Chargé de l'administration
                         </span>
+                      ) : agent.role === 'agent_etudiant' ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-teal-100 text-teal-800">
+                          Agent étudiant
+                        </span>
                       ) : (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                           Agent
@@ -337,6 +341,7 @@ const GestionAgents = () => {
                     required
                   >
                     <option value="agent">Agent</option>
+                    <option value="agent_etudiant">Agent étudiant</option>
                     <option value="admin">Administrateur</option>
                     <option value="informaticien">Informaticien</option>
                     <option value="analyste_informaticienne">Analyste informaticienne</option>
@@ -433,6 +438,7 @@ const GestionAgents = () => {
                     required
                   >
                     <option value="agent">Agent</option>
+                    <option value="agent_etudiant">Agent étudiant</option>
                     <option value="admin">Administrateur</option>
                     <option value="informaticien">Informaticien</option>
                     <option value="analyste_informaticienne">Analyste informaticienne</option>

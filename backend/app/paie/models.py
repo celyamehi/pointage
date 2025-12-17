@@ -13,6 +13,11 @@ class ParametresPaie(BaseModel):
     jours_travail_mois: int = 22
     frais_panier: float = 500.0  # DA
     frais_transport: float = 200.0  # DA
+    # Horaires spécifiques (en minutes depuis minuit)
+    heure_debut_matin: int = 8 * 60 + 5  # 8h05 par défaut
+    heure_fin_matin: int = 11 * 60 + 55  # 11h55 par défaut
+    heure_debut_aprem: int = 13 * 60 + 5  # 13h05 par défaut
+    heure_fin_aprem: int = 16 * 60 + 55  # 16h55 par défaut
 
 
 class CalculPaie(BaseModel):

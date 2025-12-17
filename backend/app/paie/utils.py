@@ -70,8 +70,21 @@ PARAMETRES_PAIE_PAR_ROLE = {
     "charge_administration": ParametresPaie(
         role="charge_administration",
         taux_horaire=182.18,
-        heures_par_jour=8,
-        heures_par_mois=174,
+        heures_par_jour=6,  # 9h-12h + 13h-16h = 6h par jour
+        heures_par_mois=132,  # 6h * 22 jours
+        jours_travail_mois=22,
+        frais_panier=500.0,
+        frais_transport=200.0,
+        heure_debut_matin=9 * 60 + 5,  # 9h05 - retard à partir de 9h05
+        heure_fin_matin=11 * 60 + 55,  # 11h55 - déduction si sortie avant
+        heure_debut_aprem=13 * 60 + 5,  # 13h05 - retard à partir de 13h05
+        heure_fin_aprem=15 * 60 + 55  # 15h55 - déduction si sortie avant (fin à 16h)
+    ),
+    "agent_etudiant": ParametresPaie(
+        role="agent_etudiant",
+        taux_horaire=182.18,
+        heures_par_jour=8,  # À ajuster selon le temps partiel
+        heures_par_mois=174,  # À ajuster selon le temps partiel
         jours_travail_mois=22,
         frais_panier=500.0,
         frais_transport=200.0
@@ -79,9 +92,10 @@ PARAMETRES_PAIE_PAR_ROLE = {
 }
 
 
-def calculer_retard_minutes(heure_arrivee: time, heure_debut_theorique: time = time(8, 0)) -> int:
+def calculer_retard_minutes(heure_arrivee: time, heure_debut_theorique: time = time(8, 5)) -> int:
     """
     Calcule le retard en minutes
+    Les retards sont comptés à partir de 8h05 (matin) et 13h05 (après-midi)
     """
     if heure_arrivee <= heure_debut_theorique:
         return 0
@@ -279,7 +293,9 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                 # Calculer le retard à l'arrivée matin si présent
                 if jour_data.get("matin_arrivee") and not absent_matin:
                     heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
-                    retard_minutes = calculer_retard_minutes(heure_arrivee)
+                    # Utiliser l'heure de début spécifique au rôle
+                    heure_debut_matin = time(params.heure_debut_matin // 60, params.heure_debut_matin % 60)
+                    retard_minutes = calculer_retard_minutes(heure_arrivee, heure_debut_matin)
                     
                     if retard_minutes > 0:
                         heures_retard_total += retard_minutes / 60.0
@@ -290,9 +306,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                         })
                 
                 # Calculer la sortie anticipée matin si présent
+                # Déduction si sortie avant l'heure de fin spécifique au rôle
                 if jour_data.get("matin_sortie") and not absent_matin:
                     heure_sortie = datetime.strptime(jour_data["matin_sortie"], "%H:%M:%S").time()
-                    heure_fin_matin = time(12, 0)
+                    heure_fin_matin = time(params.heure_fin_matin // 60, params.heure_fin_matin % 60)
                     
                     if heure_sortie < heure_fin_matin:
                         delta = datetime.combine(date.min, heure_fin_matin) - datetime.combine(date.min, heure_sortie)
@@ -308,9 +325,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             })
                 
                 # Calculer le retard à l'arrivée après-midi si présent
+                # Utiliser l'heure de début spécifique au rôle
                 if jour_data.get("apres_midi_arrivee") and not absent_apres_midi:
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
-                    heure_debut_apres_midi = time(13, 0)
+                    heure_debut_apres_midi = time(params.heure_debut_aprem // 60, params.heure_debut_aprem % 60)
                     
                     if heure_arrivee > heure_debut_apres_midi:
                         delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
@@ -325,9 +343,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             })
                 
                 # Calculer la sortie anticipée après-midi si présent
+                # Déduction si sortie avant l'heure de fin spécifique au rôle
                 if jour_data.get("apres_midi_sortie") and not absent_apres_midi:
                     heure_sortie = datetime.strptime(jour_data["apres_midi_sortie"], "%H:%M:%S").time()
-                    heure_fin_apres_midi = time(17, 0)
+                    heure_fin_apres_midi = time(params.heure_fin_aprem // 60, params.heure_fin_aprem % 60)
                     
                     if heure_sortie < heure_fin_apres_midi:
                         delta = datetime.combine(date.min, heure_fin_apres_midi) - datetime.combine(date.min, heure_sortie)
@@ -347,9 +366,11 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                 jours_presence += 1  # Compter pour les frais
                 
                 # Calculer le retard à l'arrivée du matin
+                # Utiliser l'heure de début spécifique au rôle
                 if jour_data.get("matin_arrivee"):
                     heure_arrivee = datetime.strptime(jour_data["matin_arrivee"], "%H:%M:%S").time()
-                    retard_minutes = calculer_retard_minutes(heure_arrivee)
+                    heure_debut_matin = time(params.heure_debut_matin // 60, params.heure_debut_matin % 60)
+                    retard_minutes = calculer_retard_minutes(heure_arrivee, heure_debut_matin)
                     
                     if retard_minutes > 0:
                         heures_retard_total += retard_minutes / 60.0
@@ -359,10 +380,11 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             "heures": round(retard_minutes / 60.0, 2)
                         })
                 
-                # Calculer la sortie anticipée du matin (avant 12:00)
+                # Calculer la sortie anticipée du matin
+                # Déduction si sortie avant l'heure de fin spécifique au rôle
                 if jour_data.get("matin_sortie"):
                     heure_sortie = datetime.strptime(jour_data["matin_sortie"], "%H:%M:%S").time()
-                    heure_fin_matin = time(12, 0)
+                    heure_fin_matin = time(params.heure_fin_matin // 60, params.heure_fin_matin % 60)
                     
                     if heure_sortie < heure_fin_matin:
                         delta = datetime.combine(date.min, heure_fin_matin) - datetime.combine(date.min, heure_sortie)
@@ -378,9 +400,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             })
                 
                 # Calculer le retard à l'arrivée après-midi
+                # Utiliser l'heure de début spécifique au rôle
                 if jour_data.get("apres_midi_arrivee"):
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
-                    heure_debut_apres_midi = time(13, 0)
+                    heure_debut_apres_midi = time(params.heure_debut_aprem // 60, params.heure_debut_aprem % 60)
                     
                     if heure_arrivee > heure_debut_apres_midi:
                         delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
@@ -394,10 +417,11 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                                 "heures": round(retard_minutes / 60.0, 2)
                             })
                 
-                # Calculer la sortie anticipée de l'après-midi (avant 17:00)
+                # Calculer la sortie anticipée de l'après-midi
+                # Déduction si sortie avant l'heure de fin spécifique au rôle
                 if jour_data.get("apres_midi_sortie"):
                     heure_sortie = datetime.strptime(jour_data["apres_midi_sortie"], "%H:%M:%S").time()
-                    heure_fin_apres_midi = time(17, 0)
+                    heure_fin_apres_midi = time(params.heure_fin_aprem // 60, params.heure_fin_aprem % 60)
                     
                     if heure_sortie < heure_fin_apres_midi:
                         delta = datetime.combine(date.min, heure_fin_apres_midi) - datetime.combine(date.min, heure_sortie)
