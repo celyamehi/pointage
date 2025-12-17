@@ -3,17 +3,6 @@ import { Link } from 'react-router-dom'
 
 const DownloadApp = () => {
   const appVersion = "1.0.0"
-  const apkUrl = "/downloads/pointage-collable.apk"
-  
-  const handleDownload = () => {
-    // Créer un lien de téléchargement
-    const link = document.createElement('a')
-    link.href = apkUrl
-    link.download = `pointage-collable-v${appVersion}.apk`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700">
@@ -55,15 +44,16 @@ const DownloadApp = () => {
               <p className="text-gray-500">Fichier APK • ~15 MB</p>
             </div>
 
-            <button
-              onClick={handleDownload}
+            <a
+              href="/downloads/pointage-collable.apk"
+              download={`pointage-collable-v${appVersion}.apk`}
               className="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg transition-all flex items-center justify-center space-x-3"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Télécharger l'APK</span>
-            </button>
+            </a>
 
             <p className="text-center text-gray-400 text-sm mt-4">
               Compatible Android 7.0 et supérieur
