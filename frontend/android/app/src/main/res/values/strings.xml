@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pointage Collable</string>
+    <string name="title_activity_main">Pointage Collable</string>
+    <string name="package_name">com.collable.pointage</string>
+    <string name="custom_url_scheme">com.collable.pointage</string>
+</resources>

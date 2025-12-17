@@ -8,6 +8,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 // Pages publiques
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
+import DownloadApp from './pages/DownloadApp'
 
 // Pages agent
 import AgentDashboard from './pages/agent/Dashboard'
@@ -60,6 +61,9 @@ function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
       </Route>
+      
+      {/* Page de téléchargement APK (publique) */}
+      <Route path="/telecharger-app" element={<DownloadApp />} />
       
       {/* Routes agent */}
       <Route path="/agent" element={

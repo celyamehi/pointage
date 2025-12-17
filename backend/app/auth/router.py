@@ -153,6 +153,19 @@ async def update_user(user_id: str, user_update: UserUpdate):
         update_data["nom"] = user_update.nom
     
     if user_update.role is not None:
+        # Validation des rôles acceptés
+        roles_valides = [
+            'admin', 'agent', 'agent_etudiant', 'informaticien', 
+            'analyste_informaticienne', 'superviseur', 
+            'agent_administratif', 'charge_administration'
+        ]
+        
+        if user_update.role not in roles_valides:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Rôle non valide. Rôles acceptés: {', '.join(roles_valides)}"
+            )
+        
         update_data["role"] = user_update.role
     
     if user_update.password is not None:

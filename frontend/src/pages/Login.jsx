@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import Logo from '../components/Logo'
@@ -124,6 +124,19 @@ const Login = () => {
         </button>
       </form>
       
+      {/* Lien téléchargement application mobile */}
+      <div className="mt-6 text-center">
+        <Link 
+          to="/telecharger-app" 
+          className="inline-flex items-center text-collable-teal hover:text-collable-dark transition-colors text-sm font-medium"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          Télécharger l'application mobile Android
+        </Link>
+      </div>
+
       {/* Footer */}
       <div className="mt-8 text-center">
         <p className="text-gray-400 text-sm tracking-widest">Powered by Collable</p>
