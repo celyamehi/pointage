@@ -45,7 +45,7 @@ const DownloadApp = () => {
             </div>
 
             <a
-              href="https://github.com/celyamehi/pointage/releases/download/v1.0.0/pointage-collable-v1.0.0.4.apk"
+              href="https://github.com/celyamehi/pointage/releases/download/v1.0.0/app-debug.apk"
               download="pointage-collable-v1.0.0.apk"
               className="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg transition-all flex items-center justify-center space-x-3"
             >
