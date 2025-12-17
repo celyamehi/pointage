@@ -8,7 +8,8 @@ env/
 build/
 develop-eggs/
 dist/
-downloads/
+# downloads/ - commenté pour permettre l'APK
+!frontend/public/downloads/
 eggs/
 .eggs/
 lib/
