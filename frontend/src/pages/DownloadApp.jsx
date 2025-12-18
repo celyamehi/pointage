@@ -41,12 +41,12 @@ const DownloadApp = () => {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Télécharger pour Android</h2>
-              <p className="text-gray-500">Fichier APK • ~15 MB</p>
+              <p className="text-gray-500">Fichier APK • ~26 MB • v2.0.0</p>
             </div>
 
             <a
-              href="https://github.com/celyamehi/pointage/releases/download/v1.0.0/app-debug.apk"
-              download="pointage-collable-v1.0.0.apk"
+              href="https://github.com/celyamehi/pointage/releases/download/v2.0.0/pointage-collable-v2.apk"
+              download="pointage-collable-v2.0.0.apk"
               className="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg transition-all flex items-center justify-center space-x-3"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
