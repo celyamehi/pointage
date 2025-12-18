@@ -5,7 +5,8 @@ import {
   deletePendingPointage,
   isOnline,
   onConnectionChange,
-  countPendingPointages
+  countPendingPointages,
+  getUserData
 } from './offlineStorage';
 
 let syncInProgress = false;
@@ -65,6 +66,27 @@ export const syncPendingPointages = async () => {
   if (!isOnline()) {
     console.log('Pas de connexion, synchronisation reportée');
     return { synced: 0, failed: 0, pending: await countPendingPointages() };
+  }
+
+  // Vérifier et restaurer le token si nécessaire
+  let token = localStorage.getItem('token');
+  if (!token) {
+    console.log('🔑 Token non trouvé dans localStorage, recherche dans IndexedDB...');
+    try {
+      const userData = await getUserData();
+      if (userData && userData.token) {
+        token = userData.token;
+        localStorage.setItem('token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        console.log('🔑 Token restauré depuis IndexedDB');
+      } else {
+        console.log('❌ Pas de token disponible, synchronisation impossible');
+        return { synced: 0, failed: 0, pending: await countPendingPointages(), error: 'Token manquant' };
+      }
+    } catch (error) {
+      console.error('Erreur récupération token:', error);
+      return { synced: 0, failed: 0, pending: await countPendingPointages(), error: 'Erreur token' };
+    }
   }
 
   syncInProgress = true;
