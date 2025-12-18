@@ -5,16 +5,29 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000, // 15 secondes timeout pour éviter le loading infini
 })
 
 // Intercepteur pour gérer les erreurs d'authentification
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Si le serveur répond avec une erreur 401 (non autorisé), déconnecter l'utilisateur
+    // Si timeout ou erreur réseau, ne pas rediriger vers login
+    if (error.code === 'ECONNABORTED' || !error.response) {
+      console.log('⚠️ Timeout ou erreur réseau - mode hors-ligne possible')
+      return Promise.reject(error)
+    }
+    
+    // Si le serveur répond avec une erreur 401 (non autorisé)
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Vérifier si on a "Se souvenir de moi" activé
+      const rememberMe = localStorage.getItem('rememberMe')
+      if (!rememberMe) {
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+      } else {
+        console.log('📱 Erreur 401 mais rememberMe actif - pas de redirection')
+      }
     }
     return Promise.reject(error)
   }

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import api from '../services/api'
-import { saveOfflineUserData, getOfflineUserData, clearOfflineUserData } from '../services/offlineStorage'
+import { saveOfflineUserData, getOfflineUserData, clearOfflineUserData, isOnline } from '../services/offlineStorage'
 
 const AuthContext = createContext()
 
@@ -20,24 +20,39 @@ export function AuthProvider({ children }) {
       let token = localStorage.getItem('token')
       let offlineData = null
       
-      // Si pas de token en ligne, essayer de récupérer les données hors-ligne
-      if (!token) {
+      // Toujours essayer de récupérer les données hors-ligne d'abord
+      try {
         offlineData = await getOfflineUserData()
-        if (offlineData && offlineData.rememberMe) {
-          token = offlineData.token
-          console.log('📱 Utilisation des données hors-ligne pour connexion automatique')
-        }
+        console.log('📱 Données hors-ligne récupérées:', offlineData ? 'OUI' : 'NON')
+      } catch (e) {
+        console.log('📱 Erreur récupération données hors-ligne:', e)
+      }
+      
+      // Si pas de token en localStorage, utiliser celui des données hors-ligne
+      if (!token && offlineData && offlineData.token) {
+        token = offlineData.token
+        // Restaurer le token dans localStorage pour les futures requêtes
+        localStorage.setItem('token', token)
+        console.log('📱 Token restauré depuis IndexedDB')
       }
       
       if (token) {
         try {
-          // Vérifier si le token est valide
+          // Vérifier si le token est valide (format)
           const decoded = jwtDecode(token)
           
           // Vérifier si le token est expiré
           const currentTime = Date.now() / 1000
           if (decoded.exp < currentTime) {
-            // Token expiré, déconnexion
+            console.log('⏰ Token expiré')
+            // Token expiré - mais si on a "Se souvenir de moi", garder les données locales
+            if (offlineData && offlineData.rememberMe && offlineData.user) {
+              console.log('📱 Token expiré mais données locales disponibles - mode hors-ligne')
+              setUser(offlineData.user)
+              setIsAuthenticated(true)
+              setIsLoading(false)
+              return
+            }
             logout()
             return
           }
@@ -45,33 +60,70 @@ export function AuthProvider({ children }) {
           // Configurer le token dans les en-têtes de l'API
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
           
-          // Essayer de récupérer les informations de l'utilisateur
-          try {
-            const response = await api.get('/api/auth/me')
-            setUser(response.data)
-            setIsAuthenticated(true)
-            
-            // Si on est en ligne et qu'on avait des données hors-ligne, mettre à jour
-            if (offlineData) {
-              await saveOfflineUserData({
-                ...offlineData,
-                user: response.data,
-                token: token
+          // Vérifier si on est en ligne
+          const online = isOnline()
+          
+          if (online) {
+            // Essayer de récupérer les informations de l'utilisateur avec timeout
+            try {
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
+              
+              const response = await api.get('/api/auth/me', {
+                signal: controller.signal
               })
+              clearTimeout(timeoutId)
+              
+              setUser(response.data)
+              setIsAuthenticated(true)
+              
+              // Mettre à jour les données hors-ligne
+              if (offlineData && offlineData.rememberMe) {
+                await saveOfflineUserData({
+                  ...offlineData,
+                  user: response.data,
+                  token: token
+                })
+              }
+            } catch (apiError) {
+              console.log('📱 API non accessible, utilisation des données locales')
+              // Si l'API n'est pas accessible, utiliser les données hors-ligne
+              if (offlineData && offlineData.user) {
+                setUser(offlineData.user)
+                setIsAuthenticated(true)
+              } else {
+                // Pas de données hors-ligne, on ne peut pas se connecter
+                throw apiError
+              }
             }
-          } catch (apiError) {
-            // Si l'API n'est pas accessible, utiliser les données hors-ligne
+          } else {
+            // Mode hors-ligne - utiliser directement les données locales
+            console.log('📱 Mode hors-ligne détecté')
             if (offlineData && offlineData.user) {
               setUser(offlineData.user)
               setIsAuthenticated(true)
-              console.log('📱 Mode hors-ligne - Utilisation des données locales')
+              console.log('📱 Connexion hors-ligne réussie avec données locales')
             } else {
-              throw apiError
+              console.log('📱 Pas de données hors-ligne disponibles')
             }
           }
         } catch (error) {
           console.error('Erreur lors de la vérification de l\'authentification:', error)
-          logout()
+          // En cas d'erreur, essayer quand même les données hors-ligne
+          if (offlineData && offlineData.user && offlineData.rememberMe) {
+            console.log('📱 Fallback sur données hors-ligne après erreur')
+            setUser(offlineData.user)
+            setIsAuthenticated(true)
+          } else {
+            logout()
+          }
+        }
+      } else {
+        // Pas de token - vérifier si on a des données hors-ligne avec "Se souvenir de moi"
+        if (offlineData && offlineData.user && offlineData.rememberMe) {
+          console.log('📱 Pas de token mais données hors-ligne disponibles')
+          setUser(offlineData.user)
+          setIsAuthenticated(true)
         }
       }
       
@@ -97,6 +149,13 @@ export function AuthProvider({ children }) {
       // Stocker le token dans le localStorage
       localStorage.setItem('token', access_token)
       
+      // Sauvegarder aussi le rememberMe dans localStorage pour persistance
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true')
+      } else {
+        localStorage.removeItem('rememberMe')
+      }
+      
       // Configurer le token dans les en-têtes de l'API
       api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
       
@@ -107,13 +166,18 @@ export function AuthProvider({ children }) {
       
       // Si "Se souvenir de moi" est coché, sauvegarder les données hors-ligne
       if (rememberMe) {
-        await saveOfflineUserData({
-          email,
-          token: access_token,
-          user: userResponse.data,
-          rememberMe: true
-        })
-        console.log('📱 Données utilisateur sauvegardées pour mode hors-ligne')
+        try {
+          await saveOfflineUserData({
+            email,
+            token: access_token,
+            user: userResponse.data,
+            rememberMe: true,
+            savedAt: new Date().toISOString()
+          })
+          console.log('📱 Données utilisateur sauvegardées pour mode hors-ligne')
+        } catch (saveError) {
+          console.error('Erreur sauvegarde hors-ligne:', saveError)
+        }
       }
       
       return userResponse.data
@@ -123,15 +187,20 @@ export function AuthProvider({ children }) {
     }
   }
   
-  const logout = () => {
+  const logout = async () => {
     // Supprimer le token du localStorage
     localStorage.removeItem('token')
+    localStorage.removeItem('rememberMe')
     
     // Supprimer le token des en-têtes de l'API
     delete api.defaults.headers.common['Authorization']
     
     // Effacer les données utilisateur hors-ligne
-    clearOfflineUserData()
+    try {
+      await clearOfflineUserData()
+    } catch (e) {
+      console.error('Erreur effacement données hors-ligne:', e)
+    }
     
     // Réinitialiser l'état
     setUser(null)
