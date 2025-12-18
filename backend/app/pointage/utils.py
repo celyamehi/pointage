@@ -369,11 +369,15 @@ async def create_pointage_offline(agent_id: str, qrcode: str, offline_timestamp:
     
     # Déterminer l'heure à utiliser
     if offline_timestamp:
-        # Utiliser le timestamp hors-ligne
-        now_gmt1 = offline_timestamp
-        if now_gmt1.tzinfo is None:
-            now_gmt1 = now_gmt1.replace(tzinfo=TIMEZONE)
-        print(f"📱 Utilisation du timestamp hors-ligne: {now_gmt1}")
+        # Utiliser le timestamp hors-ligne et s'assurer qu'il est en GMT+1
+        if offline_timestamp.tzinfo is None:
+            # Si pas de timezone, supposer UTC et convertir en GMT+1
+            now_gmt1 = offline_timestamp.replace(tzinfo=timezone.utc).astimezone(TIMEZONE)
+        else:
+            # Convertir en GMT+1 si timezone différente
+            now_gmt1 = offline_timestamp.astimezone(TIMEZONE)
+        print(f"📱 Timestamp hors-ligne original: {offline_timestamp}")
+        print(f"📱 Timestamp converti en GMT+1: {now_gmt1}")
     else:
         # Utiliser l'heure actuelle
         now_gmt1 = datetime.now(TIMEZONE)
