@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
+import { getCachedPointages, cachePointages, isOnline } from '../../services/offlineStorage'
 
 const MesPointages = () => {
   const [pointages, setPointages] = useState([])
@@ -53,6 +54,13 @@ const MesPointages = () => {
         
         setPointages(response.data)
         
+        // Mettre en cache les pointages pour le mode hors-ligne
+        try {
+          await cachePointages(response.data)
+        } catch (cacheErr) {
+          console.log('Erreur mise en cache:', cacheErr)
+        }
+        
         // Récupérer les jours fériés pour la période
         try {
           const year = new Date(startDate).getFullYear()
@@ -67,7 +75,29 @@ const MesPointages = () => {
         }
       } catch (error) {
         console.error('Erreur lors de la récupération des pointages:', error)
-        toast.error('Erreur lors de la récupération des pointages')
+        
+        // Essayer de récupérer les données en cache
+        try {
+          const cachedData = await getCachedPointages()
+          if (cachedData && cachedData.length > 0) {
+            // Filtrer les pointages par date
+            const filteredData = cachedData.filter(p => {
+              return p.date >= startDate && p.date <= endDate
+            })
+            setPointages(filteredData)
+            console.log('📱 Pointages récupérés depuis le cache')
+          } else {
+            // Afficher l'erreur seulement si pas de cache disponible et en ligne
+            if (isOnline()) {
+              toast.error('Erreur lors de la récupération des pointages')
+            }
+          }
+        } catch (cacheErr) {
+          console.log('Pas de cache disponible')
+          if (isOnline()) {
+            toast.error('Erreur lors de la récupération des pointages')
+          }
+        }
       } finally {
         setIsLoading(false)
       }

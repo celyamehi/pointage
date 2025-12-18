@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
+import { getCachedPointages, cachePointages, isOnline } from '../../services/offlineStorage'
 
 const AgentDashboard = () => {
   const { user } = useAuth()
@@ -31,9 +32,9 @@ const AgentDashboard = () => {
   
   useEffect(() => {
     const fetchData = async () => {
+      const todayStr = today.toISOString().split('T')[0]
+      
       try {
-        const todayStr = today.toISOString().split('T')[0]
-        
         // Vérifier si c'est un jour férié
         try {
           const jourFerieResponse = await api.get(`/api/jours-feries/check/${todayStr}`)
@@ -63,9 +64,42 @@ const AgentDashboard = () => {
             apres_midi_sortie: todayPointage.apres_midi_sortie
           })
         }
+        
+        // Mettre en cache les pointages pour le mode hors-ligne
+        try {
+          await cachePointages(response.data)
+        } catch (cacheErr) {
+          console.log('Erreur mise en cache:', cacheErr)
+        }
       } catch (error) {
         console.error('Erreur lors de la récupération des pointages:', error)
-        toast.error('Erreur lors de la récupération des pointages')
+        
+        // Essayer de récupérer les données en cache
+        try {
+          const cachedData = await getCachedPointages()
+          if (cachedData && cachedData.length > 0) {
+            const todayPointage = cachedData.find(p => p.date === todayStr)
+            if (todayPointage) {
+              setPointagesAujourdhui({
+                matin_arrivee: todayPointage.matin_arrivee,
+                matin_sortie: todayPointage.matin_sortie,
+                apres_midi_arrivee: todayPointage.apres_midi_arrivee,
+                apres_midi_sortie: todayPointage.apres_midi_sortie
+              })
+              console.log('📱 Pointages récupérés depuis le cache')
+            }
+          } else {
+            // Afficher l'erreur seulement si pas de cache disponible
+            if (isOnline()) {
+              toast.error('Erreur lors de la récupération des pointages')
+            }
+          }
+        } catch (cacheErr) {
+          console.log('Pas de cache disponible')
+          if (isOnline()) {
+            toast.error('Erreur lors de la récupération des pointages')
+          }
+        }
       } finally {
         setIsLoading(false)
       }
