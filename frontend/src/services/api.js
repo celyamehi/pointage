@@ -19,16 +19,11 @@ api.interceptors.response.use(
     }
     
     // Si le serveur répond avec une erreur 401 (non autorisé)
+    // NE PAS rediriger automatiquement - laisser AuthContext gérer
     if (error.response && error.response.status === 401) {
-      // Vérifier si on a "Se souvenir de moi" activé
-      const rememberMe = localStorage.getItem('rememberMe')
-      if (!rememberMe) {
-        localStorage.removeItem('token')
-        window.location.href = '/login'
-      } else {
-        console.log('📱 Erreur 401 mais rememberMe actif - pas de redirection')
-      }
+      console.log('⚠️ Erreur 401 - AuthContext va gérer la déconnexion')
     }
+    
     return Promise.reject(error)
   }
 )

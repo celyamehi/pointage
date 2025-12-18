@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState(null)
   
   useEffect(() => {
     // Vérifier si un token existe dans le localStorage ou hors-ligne
@@ -109,13 +110,18 @@ export function AuthProvider({ children }) {
           }
         } catch (error) {
           console.error('Erreur lors de la vérification de l\'authentification:', error)
+          setAuthError(error.message || 'Erreur de connexion')
           // En cas d'erreur, essayer quand même les données hors-ligne
           if (offlineData && offlineData.user && offlineData.rememberMe) {
             console.log('📱 Fallback sur données hors-ligne après erreur')
             setUser(offlineData.user)
             setIsAuthenticated(true)
+            setAuthError(null)
           } else {
-            logout()
+            // Ne pas appeler logout() ici pour éviter la boucle
+            setUser(null)
+            setIsAuthenticated(false)
+            localStorage.removeItem('token')
           }
         }
       } else {
@@ -211,6 +217,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     isLoading,
+    authError,
     login,
     logout
   }
