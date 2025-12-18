@@ -224,9 +224,14 @@ export const cachePointages = async (pointages) => {
     // Vider le cache existant
     store.clear();
     
-    // Ajouter les nouveaux pointages
+    // Ajouter les nouveaux pointages avec un id basé sur la date
     pointages.forEach(pointage => {
-      store.put(pointage);
+      // S'assurer que chaque pointage a un id (utiliser date comme fallback)
+      const pointageWithId = {
+        ...pointage,
+        id: pointage.id || pointage.date || `pointage_${Date.now()}_${Math.random()}`
+      };
+      store.put(pointageWithId);
     });
     
     transaction.oncomplete = () => {
