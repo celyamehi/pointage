@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from app.auth.utils import get_current_active_user
 from app.auth.models import User
-from app.pointage.models import PointageCreate, PointageResponse, PointageJour
-from app.pointage.utils import create_pointage, format_pointages_by_date
+from app.pointage.models import PointageCreate, PointageResponse, PointageJour, PointageScanOffline
+from app.pointage.utils import create_pointage, format_pointages_by_date, create_pointage_offline
 from app.pointage.suivi_utils import get_agent_daily_tracking
 
 router = APIRouter()
@@ -134,4 +134,57 @@ async def mon_suivi_quotidien(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération du suivi: {str(e)}"
+        )
+
+
+@router.post("/scan")
+async def enregistrer_pointage_scan(
+    pointage_data: PointageScanOffline,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Endpoint pour enregistrer un pointage depuis un scan QR (avec support hors-ligne)
+    
+    Ce endpoint est utilisé pour la synchronisation des pointages effectués hors-ligne.
+    Le qr_data contient les données du QR code scanné.
+    Le offline_timestamp contient l'heure à laquelle le scan a été effectué (si hors-ligne).
+    """
+    try:
+        # Parser le timestamp hors-ligne si fourni
+        offline_time = None
+        if pointage_data.offline_timestamp:
+            try:
+                offline_time = datetime.fromisoformat(pointage_data.offline_timestamp.replace('Z', '+00:00'))
+                print(f"📱 Pointage hors-ligne reçu, timestamp original: {offline_time}")
+            except ValueError as e:
+                print(f"⚠️ Erreur parsing timestamp hors-ligne: {e}")
+        
+        # Créer le pointage avec le timestamp hors-ligne si disponible
+        pointage_result = await create_pointage_offline(
+            agent_id=str(current_user.id),
+            qrcode=pointage_data.qr_data,
+            offline_timestamp=offline_time
+        )
+        
+        type_fr = "Arrivée" if pointage_result.get("type_pointage") == "arrivee" else "Sortie"
+        session_fr = "du matin" if pointage_result.get("session") == "matin" else "de l'après-midi"
+        
+        return {
+            "success": True,
+            "message": f"{type_fr} {session_fr} enregistrée avec succès",
+            "pointage": pointage_result,
+            "was_offline": pointage_data.offline_timestamp is not None
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        print(f"❌ Erreur pointage scan: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de l'enregistrement du pointage: {str(e)}"
         )

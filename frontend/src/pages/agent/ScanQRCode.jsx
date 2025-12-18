@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOffline } from '../../contexts/OfflineContext'
 import { Html5Qrcode } from 'html5-qrcode'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
@@ -8,6 +9,7 @@ import './ScanQRCode.css'
 
 const ScanQRCode = () => {
   const { user } = useAuth()
+  const { isOnline, addPointage, pendingCount } = useOffline()
   const navigate = useNavigate()
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
@@ -16,6 +18,7 @@ const ScanQRCode = () => {
   const [cameras, setCameras] = useState([])
   const [selectedCamera, setSelectedCamera] = useState(null)
   const [permissionStatus, setPermissionStatus] = useState('checking')
+  const [offlineMode, setOfflineMode] = useState(false)
   
   // État pour la confirmation de sortie rapide (dans les 5 minutes après arrivée)
   const [showConfirmation, setShowConfirmation] = useState(false)
@@ -175,6 +178,28 @@ const ScanQRCode = () => {
     
     setIsSubmitting(true)
     
+    // Mode hors-ligne : stocker le pointage localement
+    if (!isOnline) {
+      try {
+        const result = await addPointage(qrcode)
+        setOfflineMode(true)
+        toast.info('📱 Pointage enregistré hors-ligne. Il sera synchronisé automatiquement quand la connexion sera rétablie.')
+        
+        setTimeout(() => {
+          navigate('/agent')
+        }, 2000)
+      } catch (error) {
+        console.error('Erreur stockage hors-ligne:', error)
+        toast.error('Erreur lors de l\'enregistrement hors-ligne.')
+        setScanResult(null)
+        setIsScanning(false)
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+    
+    // Mode en ligne : envoyer au serveur
     try {
       // Déterminer la session actuelle (matin ou après-midi)
       const currentHour = new Date().getHours()
@@ -206,6 +231,22 @@ const ScanQRCode = () => {
       }, 2000)
     } catch (error) {
       console.error('Erreur lors du pointage:', error)
+      
+      // Si erreur réseau, basculer en mode hors-ligne
+      if (!error.response || error.code === 'ERR_NETWORK') {
+        try {
+          await addPointage(qrcode)
+          setOfflineMode(true)
+          toast.info('📱 Connexion perdue. Pointage enregistré hors-ligne.')
+          
+          setTimeout(() => {
+            navigate('/agent')
+          }, 2000)
+          return
+        } catch (offlineError) {
+          console.error('Erreur stockage hors-ligne:', offlineError)
+        }
+      }
       
       if (error.response && error.response.data && error.response.data.detail) {
         toast.error(error.response.data.detail)
@@ -273,6 +314,29 @@ const ScanQRCode = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Scanner le QR Code</h1>
+      
+      {/* Indicateur de mode hors-ligne */}
+      {!isOnline && (
+        <div className="bg-orange-100 border border-orange-300 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center">
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+          </svg>
+          <div>
+            <p className="font-medium">Mode hors-ligne actif</p>
+            <p className="text-sm">Vos pointages seront synchronisés automatiquement quand la connexion sera rétablie.</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Indicateur de pointages en attente */}
+      {pendingCount > 0 && (
+        <div className="bg-blue-100 border border-blue-300 text-blue-800 px-4 py-3 rounded-lg mb-4 flex items-center">
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p>{pendingCount} pointage{pendingCount > 1 ? 's' : ''} en attente de synchronisation</p>
+        </div>
+      )}
       
       {/* Modal de confirmation pour sortie rapide */}
       {showConfirmation && (

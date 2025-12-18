@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    https: false, // Mettre à true en production avec certificat SSL
+    https: false, // HTTP - la caméra ne fonctionnera pas en développement web
     host: true, // Permet l'accès depuis le réseau local
     proxy: {
       '/api': {

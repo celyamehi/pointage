@@ -349,3 +349,91 @@ async def format_pointages_by_date(agent_id: str, start_date: Optional[date] = N
     
     # Convertir en liste
     return list(pointages_by_date.values())
+
+
+async def create_pointage_offline(agent_id: str, qrcode: str, offline_timestamp: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Crée un pointage avec support pour les timestamps hors-ligne.
+    
+    Si offline_timestamp est fourni, utilise cette heure pour le pointage.
+    Sinon, utilise l'heure actuelle.
+    
+    Cette fonction est utilisée pour synchroniser les pointages effectués hors-ligne.
+    """
+    db = await get_db()
+    
+    # Valider le QR code
+    is_valid = await validate_qrcode(qrcode)
+    if not is_valid:
+        raise ValueError("QR code invalide ou expiré")
+    
+    # Déterminer l'heure à utiliser
+    if offline_timestamp:
+        # Utiliser le timestamp hors-ligne
+        now_gmt1 = offline_timestamp
+        if now_gmt1.tzinfo is None:
+            now_gmt1 = now_gmt1.replace(tzinfo=TIMEZONE)
+        print(f"📱 Utilisation du timestamp hors-ligne: {now_gmt1}")
+    else:
+        # Utiliser l'heure actuelle
+        now_gmt1 = datetime.now(TIMEZONE)
+    
+    today = now_gmt1.date().isoformat()
+    current_hour = now_gmt1.hour
+    
+    # Déterminer la session basée sur l'heure du pointage
+    if current_hour < 13:
+        session = "matin"
+    else:
+        session = "apres-midi"
+    
+    # Récupérer les pointages existants pour aujourd'hui
+    existing_pointages = db.table("pointages").select("*").eq("agent_id", agent_id).eq("date_pointage", today).or_("annule.is.null,annule.eq.false").order("heure_pointage").execute()
+    pointages_today = existing_pointages.data if existing_pointages.data else []
+    
+    # Filtrer par session
+    pointages_session = [p for p in pointages_today if p.get("session") == session and not p.get("annule")]
+    nb_pointages = len(pointages_session)
+    
+    # Déterminer le type de pointage
+    if nb_pointages == 0:
+        type_pointage = "arrivee"
+    elif nb_pointages == 1:
+        type_pointage = "sortie"
+    else:
+        raise ValueError(f"Session {session} déjà complète pour aujourd'hui (arrivée et sortie enregistrées)")
+    
+    print(f"📱 Pointage hors-ligne - Session: {session}, Type: {type_pointage}, Heure: {now_gmt1.strftime('%H:%M:%S')}")
+    
+    # Créer le pointage
+    new_pointage = {
+        "id": str(uuid.uuid4()),
+        "agent_id": agent_id,
+        "date_pointage": today,
+        "heure_pointage": now_gmt1.strftime("%H:%M:%S"),
+        "session": session,
+        "type_pointage": type_pointage,
+        "offline_sync": True if offline_timestamp else False
+    }
+    
+    try:
+        result = db.table("pointages").insert(new_pointage).execute()
+    except Exception as e:
+        print(f"❌ Erreur insertion pointage hors-ligne: {str(e)}")
+        raise Exception(f"Erreur lors de l'enregistrement du pointage: {str(e)}")
+    
+    if not result.data or len(result.data) == 0:
+        raise Exception("Erreur lors de l'enregistrement du pointage")
+    
+    pointage_db = result.data[0]
+    
+    return {
+        "id": pointage_db["id"],
+        "agent_id": pointage_db["agent_id"],
+        "date_pointage": pointage_db["date_pointage"],
+        "heure_pointage": pointage_db["heure_pointage"],
+        "session": pointage_db["session"],
+        "type_pointage": type_pointage,
+        "created_at": pointage_db["created_at"],
+        "was_offline": offline_timestamp is not None
+    }

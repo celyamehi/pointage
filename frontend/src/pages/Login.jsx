@@ -8,6 +8,7 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -23,12 +24,17 @@ const Login = () => {
     setIsLoading(true)
     
     try {
-      const user = await login(email, password)
+      const user = await login(email, password, rememberMe)
+      
+      // Message différent si "Se souvenir de moi" est coché
+      if (rememberMe) {
+        toast.success('📱 Connexion réussie - Vous resterez connecté même hors-ligne')
+      } else {
+        toast.success('Connexion réussie')
+      }
       
       // Rediriger vers le tableau de bord approprié
       navigate(user.role === 'admin' ? '/admin' : '/agent')
-      
-      toast.success('Connexion réussie')
     } catch (error) {
       console.error('Erreur de connexion:', error)
       
@@ -102,6 +108,21 @@ const Login = () => {
               )}
             </button>
           </div>
+        </div>
+        
+        {/* Checkbox "Se souvenir de moi" */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-collable-teal border-gray-300 rounded focus:ring-collable-teal focus:ring-2"
+            />
+            <span className="ml-2 text-sm text-gray-600">
+              Se souvenir de moi
+            </span>
+          </label>
         </div>
         
         {/* Bouton de connexion */}

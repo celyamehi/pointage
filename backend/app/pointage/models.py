@@ -12,6 +12,13 @@ class PointageBase(BaseModel):
 class PointageCreate(PointageBase):
     qrcode: str
     force_confirmation: bool = False
+    offline_timestamp: Optional[str] = None  # Timestamp du pointage hors-ligne
+
+
+class PointageScanOffline(BaseModel):
+    """Modèle pour les pointages hors-ligne synchronisés"""
+    qr_data: str
+    offline_timestamp: Optional[str] = None
 
 
 class Pointage(PointageBase):
