@@ -44,3 +44,6 @@ yarn-error.log
 
 # Fichiers générés
 static/qrcodes/
+
+# APK files (trop gros pour Git)
+*.apk
