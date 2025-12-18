@@ -33,14 +33,21 @@ const notifySyncListeners = (event, data) => {
 // Synchroniser un pointage individuel
 const syncSinglePointage = async (pointage) => {
   try {
+    console.log('📤 Envoi pointage au serveur:', {
+      qr_data: pointage.qr_data,
+      offline_timestamp: pointage.timestamp
+    });
+    
     const response = await api.post('/api/pointage/scan', {
       qr_data: pointage.qr_data,
       offline_timestamp: pointage.timestamp
     });
     
+    console.log('✅ Pointage synchronisé:', response.data);
     return { success: true, data: response.data };
   } catch (error) {
-    console.error('Erreur sync pointage:', error);
+    console.error('❌ Erreur sync pointage:', error);
+    console.error('Détails erreur:', error.response?.data);
     return { 
       success: false, 
       error: error.response?.data?.detail || error.message 

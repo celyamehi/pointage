@@ -1,8 +1,31 @@
 import React from 'react';
 import { useOffline } from '../contexts/OfflineContext';
+import { toast } from 'react-toastify';
 
 const OfflineIndicator = () => {
-  const { isOnline, pendingCount, isSyncing, forceSync } = useOffline();
+  const { isOnline, pendingCount, isSyncing, forceSync, lastSyncResult } = useOffline();
+
+  // Fonction pour synchroniser avec feedback
+  const handleSync = async () => {
+    console.log('🔄 Bouton Sync cliqué, lancement de la synchronisation...');
+    try {
+      const result = await forceSync();
+      console.log('📊 Résultat sync:', result);
+      
+      if (result.success) {
+        if (result.synced > 0) {
+          toast.success(`✅ ${result.synced} pointage(s) synchronisé(s) avec succès !`);
+        } else if (result.pending > 0) {
+          toast.warning(`⚠️ ${result.pending} pointage(s) en attente. Réessayez plus tard.`);
+        }
+      } else {
+        toast.error(`❌ Erreur: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Erreur sync:', error);
+      toast.error('Erreur lors de la synchronisation');
+    }
+  };
 
   // Ne rien afficher si en ligne et pas de pointages en attente
   if (isOnline && pendingCount === 0 && !isSyncing) {
@@ -45,7 +68,7 @@ const OfflineIndicator = () => {
         {/* Bouton de synchronisation manuelle */}
         {isOnline && pendingCount > 0 && !isSyncing && (
           <button
-            onClick={forceSync}
+            onClick={handleSync}
             className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition-colors"
           >
             Sync
