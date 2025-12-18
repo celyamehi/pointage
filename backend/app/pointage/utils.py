@@ -405,15 +405,14 @@ async def create_pointage_offline(agent_id: str, qrcode: str, offline_timestamp:
     
     print(f"📱 Pointage hors-ligne - Session: {session}, Type: {type_pointage}, Heure: {now_gmt1.strftime('%H:%M:%S')}")
     
-    # Créer le pointage
+    # Créer le pointage (sans offline_sync car la colonne n'existe pas dans Supabase)
     new_pointage = {
         "id": str(uuid.uuid4()),
         "agent_id": agent_id,
         "date_pointage": today,
         "heure_pointage": now_gmt1.strftime("%H:%M:%S"),
         "session": session,
-        "type_pointage": type_pointage,
-        "offline_sync": True if offline_timestamp else False
+        "type_pointage": type_pointage
     }
     
     try:
