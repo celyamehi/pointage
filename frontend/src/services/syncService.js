@@ -95,6 +95,8 @@ export const syncPendingPointages = async () => {
   let synced = 0;
   let failed = 0;
 
+  let lastError = null;
+  
   try {
     const pendingPointages = await getPendingPointages();
     console.log(`${pendingPointages.length} pointage(s) en attente de synchronisation`);
@@ -107,19 +109,33 @@ export const syncPendingPointages = async () => {
         synced++;
         notifySyncListeners('pointage_synced', { pointage, result: result.data });
       } else {
-        failed++;
+        lastError = result.error;
         notifySyncListeners('pointage_failed', { pointage, error: result.error });
+        
+        // Si l'erreur est "session déjà complète", supprimer le pointage bloqué automatiquement
+        if (result.error && (
+          result.error.includes('déjà complète') || 
+          result.error.includes('already complete') ||
+          result.error.includes('Session') ||
+          result.error.includes('arrivée et sortie')
+        )) {
+          console.log('🗑️ Suppression du pointage bloqué (session complète):', pointage.id);
+          await deletePendingPointage(pointage.id);
+          // Ne pas compter comme échec car c'est un doublon
+        } else {
+          failed++;
+        }
       }
     }
 
     const pending = await countPendingPointages();
-    notifySyncListeners('sync_complete', { synced, failed, pending });
+    notifySyncListeners('sync_complete', { synced, failed, pending, lastError });
     
-    return { synced, failed, pending };
+    return { synced, failed, pending, lastError };
   } catch (error) {
     console.error('Erreur lors de la synchronisation:', error);
     notifySyncListeners('sync_error', { error: error.message });
-    return { synced, failed, pending: await countPendingPointages() };
+    return { synced, failed, pending: await countPendingPointages(), lastError: error.message };
   } finally {
     syncInProgress = false;
   }

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useOffline } from '../contexts/OfflineContext';
 import { toast } from 'react-toastify';
+import { clearAllData } from '../services/offlineStorage';
 
 const OfflineIndicator = () => {
-  const { isOnline, pendingCount, isSyncing, forceSync, lastSyncResult } = useOffline();
+  const { isOnline, pendingCount, isSyncing, forceSync, lastSyncResult, refreshPendingCount } = useOffline();
 
   // Fonction pour synchroniser avec feedback
   const handleSync = async () => {
@@ -12,18 +13,54 @@ const OfflineIndicator = () => {
       const result = await forceSync();
       console.log('📊 Résultat sync:', result);
       
-      if (result.success) {
-        if (result.synced > 0) {
-          toast.success(`✅ ${result.synced} pointage(s) synchronisé(s) avec succès !`);
-        } else if (result.pending > 0) {
-          toast.warning(`⚠️ ${result.pending} pointage(s) en attente. Réessayez plus tard.`);
-        }
-      } else {
-        toast.error(`❌ Erreur: ${result.message}`);
+      if (result.synced > 0) {
+        toast.success(`✅ ${result.synced} pointage(s) synchronisé(s) avec succès !`);
+      }
+      
+      if (result.failed > 0) {
+        toast.error(`❌ ${result.failed} pointage(s) échoué(s): ${result.lastError || 'Erreur serveur'}`);
+      }
+      
+      if (result.synced === 0 && result.failed === 0 && result.pending > 0) {
+        toast.warning(`⚠️ ${result.pending} pointage(s) en attente. Réessayez plus tard.`);
+      }
+      
+      if (result.error) {
+        toast.error(`❌ Erreur: ${result.error}`);
+      }
+      
+      // Si plus de pointages en attente après sync, afficher un message
+      if (result.pending === 0 && pendingCount > 0) {
+        toast.info('✅ Tous les pointages ont été traités');
       }
     } catch (error) {
       console.error('Erreur sync:', error);
       toast.error('Erreur lors de la synchronisation');
+    }
+  };
+  
+  // Fonction pour supprimer les pointages bloqués
+  const handleClearPending = async () => {
+    if (window.confirm('Voulez-vous vraiment supprimer tous les pointages en attente ? Cette action est irréversible.')) {
+      try {
+        // Ouvrir IndexedDB et supprimer les pointages en attente
+        const request = indexedDB.open('PointageOfflineDB');
+        request.onsuccess = function(e) {
+          const db = e.target.result;
+          if (db.objectStoreNames.contains('pending_pointages')) {
+            const tx = db.transaction('pending_pointages', 'readwrite');
+            tx.objectStore('pending_pointages').clear();
+            tx.oncomplete = () => {
+              toast.success('✅ Pointages en attente supprimés');
+              if (refreshPendingCount) refreshPendingCount();
+              window.location.reload();
+            };
+          }
+        };
+      } catch (error) {
+        console.error('Erreur suppression:', error);
+        toast.error('Erreur lors de la suppression');
+      }
     }
   };
 
@@ -65,14 +102,25 @@ const OfflineIndicator = () => {
           </div>
         </div>
 
-        {/* Bouton de synchronisation manuelle */}
-        {isOnline && pendingCount > 0 && !isSyncing && (
-          <button
-            onClick={handleSync}
-            className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition-colors"
-          >
-            Sync
-          </button>
+        {/* Boutons de synchronisation et suppression */}
+        {pendingCount > 0 && !isSyncing && (
+          <div className="flex space-x-2">
+            {isOnline && (
+              <button
+                onClick={handleSync}
+                className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition-colors"
+              >
+                Sync
+              </button>
+            )}
+            <button
+              onClick={handleClearPending}
+              className="bg-red-600/50 hover:bg-red-600/70 px-2 py-1 rounded text-xs transition-colors"
+              title="Supprimer les pointages bloqués"
+            >
+              ✕
+            </button>
+          </div>
         )}
       </div>
     </div>
