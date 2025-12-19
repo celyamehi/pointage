@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import api from '../services/api'
 import { saveOfflineUserData, getOfflineUserData, clearOfflineUserData, isOnline } from '../services/offlineStorage'
@@ -14,6 +14,19 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState(null)
+  
+  // Fonction pour rafraîchir le token si on a les credentials sauvegardés
+  const refreshToken = useCallback(async (offlineData) => {
+    if (!offlineData || !offlineData.email) {
+      console.log('📱 Pas de credentials pour rafraîchir le token')
+      return null
+    }
+    
+    // On ne peut pas rafraîchir sans le mot de passe
+    // Mais on peut utiliser les données hors-ligne
+    console.log('📱 Token expiré - utilisation des données hors-ligne')
+    return offlineData
+  }, [])
   
   useEffect(() => {
     // Vérifier si un token existe dans le localStorage ou hors-ligne
@@ -87,9 +100,17 @@ export function AuthProvider({ children }) {
                 })
               }
             } catch (apiError) {
-              console.log('📱 API non accessible, utilisation des données locales')
-              // Si l'API n'est pas accessible, utiliser les données hors-ligne
-              if (offlineData && offlineData.user) {
+              console.log('📱 API non accessible ou erreur 401, utilisation des données locales')
+              
+              // Si erreur 401 (token expiré) et qu'on a des données hors-ligne avec rememberMe
+              if (apiError.response?.status === 401 && offlineData && offlineData.user && offlineData.rememberMe) {
+                console.log('📱 Token expiré mais rememberMe actif - utilisation données locales')
+                setUser(offlineData.user)
+                setIsAuthenticated(true)
+                // Supprimer le token expiré
+                localStorage.removeItem('token')
+              } else if (offlineData && offlineData.user) {
+                // Autre erreur API mais on a des données locales
                 setUser(offlineData.user)
                 setIsAuthenticated(true)
               } else {
