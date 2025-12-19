@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import UpdateChecker from './components/UpdateChecker'
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout'
@@ -56,7 +57,11 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
 function App() {
   return (
-    <Routes>
+    <>
+      {/* Vérificateur de mise à jour (mobile uniquement) */}
+      <UpdateChecker />
+      
+      <Routes>
       {/* Routes publiques */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
@@ -101,6 +106,7 @@ function App() {
       {/* Route 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   )
 }
 

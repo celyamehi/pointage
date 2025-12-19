@@ -22,6 +22,7 @@ from app.admin import router as admin_router
 from app.paie import router as paie_router
 from app.primes import router as primes_router
 from app.jours_feries import router as jours_feries_router
+from app.version import router as version_router
 from app.db import init_db
 
 # Les variables d'environnement sont définies directement dans app/db.py
@@ -68,6 +69,7 @@ app.include_router(admin_router.router, prefix="/api/admin", tags=["Administrati
 app.include_router(paie_router, prefix="/api/paie", tags=["Paie"])
 app.include_router(primes_router.router, tags=["Primes"])
 app.include_router(jours_feries_router.router, tags=["Jours Fériés"])
+app.include_router(version_router.router, prefix="/api/version", tags=["Version"])
 
 # Route racine
 @app.get("/", tags=["Root"])
