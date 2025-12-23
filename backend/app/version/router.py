@@ -3,8 +3,8 @@ from fastapi import APIRouter
 router = APIRouter()
 
 # Version actuelle de l'application
-CURRENT_VERSION = "2.0.3"
-APK_DOWNLOAD_URL = "https://github.com/celyamehi/pointage/releases/download/v2.0.3/pointage-collable-v2.0.3.apk"
+CURRENT_VERSION = "2.0.4"
+APK_DOWNLOAD_URL = "https://github.com/celyamehi/pointage/releases/download/v2.0.4/pointage-collable-v2.0.4.apk"
 
 @router.get("/check")
 async def check_version():

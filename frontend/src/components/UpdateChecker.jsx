@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import api from '../services/api';
 
 // Version actuelle de l'application (à mettre à jour à chaque release)
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.4';
 
 const UpdateChecker = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
