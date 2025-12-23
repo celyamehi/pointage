@@ -15,7 +15,7 @@ from app.auth.models import TokenData, User, UserInDB
 # Configuration directe
 SECRET_KEY = "your_secret_key_for_jwt_tokens"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 jours pour éviter les déconnexions fréquentes
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 jours pour éviter les déconnexions fréquentes
 
 # Configuration de la sécurité des mots de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
