@@ -26,7 +26,11 @@ const OfflineIndicator = () => {
       }
       
       if (result.error) {
-        toast.error(`❌ Erreur: ${result.error}`);
+        if (result.error.includes('Token') || result.error.includes('token')) {
+          toast.error(`🔐 ${result.error} - Reconnectez-vous puis réessayez`);
+        } else {
+          toast.error(`❌ Erreur: ${result.error}`);
+        }
       }
       
       // Si plus de pointages en attente après sync, afficher un message
@@ -44,18 +48,27 @@ const OfflineIndicator = () => {
     if (window.confirm('Voulez-vous vraiment supprimer tous les pointages en attente ? Cette action est irréversible.')) {
       try {
         // Ouvrir IndexedDB et supprimer les pointages en attente
-        const request = indexedDB.open('PointageOfflineDB');
+        const request = indexedDB.open('pointage_offline_db');
         request.onsuccess = function(e) {
-          const db = e.target.result;
-          if (db.objectStoreNames.contains('pending_pointages')) {
-            const tx = db.transaction('pending_pointages', 'readwrite');
+          const database = e.target.result;
+          if (database.objectStoreNames.contains('pending_pointages')) {
+            const tx = database.transaction('pending_pointages', 'readwrite');
             tx.objectStore('pending_pointages').clear();
             tx.oncomplete = () => {
               toast.success('✅ Pointages en attente supprimés');
               if (refreshPendingCount) refreshPendingCount();
-              window.location.reload();
+              // Forcer le rafraîchissement de la page
+              setTimeout(() => window.location.reload(), 500);
             };
+            tx.onerror = () => {
+              toast.error('Erreur lors de la suppression');
+            };
+          } else {
+            toast.info('Aucun pointage en attente');
           }
+        };
+        request.onerror = function() {
+          toast.error('Erreur d\'accès à la base de données');
         };
       } catch (error) {
         console.error('Erreur suppression:', error);

@@ -49,6 +49,16 @@ const syncSinglePointage = async (pointage) => {
   } catch (error) {
     console.error('❌ Erreur sync pointage:', error);
     console.error('Détails erreur:', error.response?.data);
+    
+    // Si erreur 401, c'est un problème de token
+    if (error.response?.status === 401) {
+      return { 
+        success: false, 
+        error: 'Token expiré - Veuillez vous reconnecter',
+        isAuthError: true
+      };
+    }
+    
     return { 
       success: false, 
       error: error.response?.data?.detail || error.message 
@@ -111,6 +121,13 @@ export const syncPendingPointages = async () => {
       } else {
         lastError = result.error;
         notifySyncListeners('pointage_failed', { pointage, error: result.error });
+        
+        // Si erreur d'authentification, arrêter la sync et demander reconnexion
+        if (result.isAuthError) {
+          console.log('🔐 Erreur d\'authentification, arrêt de la synchronisation');
+          failed++;
+          break; // Arrêter la boucle, pas la peine de continuer
+        }
         
         // Si l'erreur est "session déjà complète", supprimer le pointage bloqué automatiquement
         if (result.error && (
