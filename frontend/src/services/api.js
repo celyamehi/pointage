@@ -5,7 +5,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 secondes timeout pour éviter le loading infini
+  timeout: 30000, // 30 secondes timeout pour le cold start de Render
 })
 
 // Variable pour éviter les boucles de refresh
@@ -15,26 +15,33 @@ let isRefreshing = false
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Si timeout ou erreur réseau, ne pas rediriger vers login
+    const originalRequest = error.config
+    
+    // Si timeout ou erreur réseau, réessayer une fois
     if (error.code === 'ECONNABORTED' || !error.response) {
-      console.log('⚠️ Timeout ou erreur réseau - mode hors-ligne possible')
+      console.log('⚠️ Timeout ou erreur réseau - tentative de retry...')
+      
+      // Réessayer une fois si pas déjà fait
+      if (!originalRequest._networkRetry) {
+        originalRequest._networkRetry = true
+        console.log('🔄 Retry de la requête après timeout...')
+        return api(originalRequest)
+      }
+      
       return Promise.reject(error)
     }
     
     // Si le serveur répond avec une erreur 401 (non autorisé)
     if (error.response && error.response.status === 401) {
-      console.log('⚠️ Erreur 401 - Token probablement expiré')
+      console.log('⚠️ Erreur 401 - Token expiré, reconnexion nécessaire')
       
       // Éviter les boucles infinies
-      if (!isRefreshing && !error.config._retry) {
+      if (!isRefreshing && !originalRequest._retry) {
         isRefreshing = true
-        error.config._retry = true
+        originalRequest._retry = true
         
-        // Supprimer le token expiré
-        localStorage.removeItem('token')
-        delete api.defaults.headers.common['Authorization']
-        
-        console.log('🔄 Token supprimé - l\'utilisateur devra se reconnecter')
+        // Marquer que le token est expiré
+        console.log('🔐 Token expiré - l\'utilisateur doit se reconnecter')
         isRefreshing = false
       }
     }
