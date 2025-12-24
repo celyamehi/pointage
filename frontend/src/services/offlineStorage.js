@@ -102,6 +102,19 @@ export const getPendingPointages = async () => {
     request.onsuccess = () => {
       // Filtrer les pointages non synchronisés
       const pending = (request.result || []).filter(p => p.synced === false);
+      
+      // IMPORTANT: Trier par timestamp pour synchroniser dans l'ordre chronologique
+      pending.sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return timeA - timeB;
+      });
+      
+      console.log('📋 Pointages en attente (triés par timestamp):', pending.map(p => ({
+        timestamp: p.timestamp,
+        qr_data: p.qr_data
+      })));
+      
       resolve(pending);
     };
     
