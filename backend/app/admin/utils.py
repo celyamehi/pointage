@@ -151,8 +151,8 @@ async def get_dashboard_stats() -> Dict[str, int]:
                 # Récupérer tous les agents pour avoir leurs noms
                 all_agents_ids = list(agents_presents_matin.union(agents_presents_aprem))
                 if all_agents_ids:
-                    agents_info = db.table("agents").select("id, nom, prenom").in_("id", all_agents_ids).execute()
-                    agents_dict = {a["id"]: f"{a['prenom']} {a['nom']}" for a in agents_info.data} if agents_info.data else {}
+                    agents_info = db.table("agents").select("id, nom").in_("id", all_agents_ids).execute()
+                    agents_dict = {a["id"]: a['nom'] for a in agents_info.data} if agents_info.data else {}
                     
                     # Liste des noms des agents présents le matin
                     liste_presents_matin = sorted([agents_dict.get(aid, "Inconnu") for aid in agents_presents_matin])
