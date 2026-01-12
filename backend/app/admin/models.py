@@ -23,6 +23,8 @@ class DashboardStats(BaseModel):
     arrivees_aprem: int
     pointages_matin: int
     pointages_aprem: int
+    liste_presents_matin: List[str] = []
+    liste_presents_aprem: List[str] = []
 
 
 class AgentPointageFilters(BaseModel):

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
 
@@ -13,7 +12,9 @@ const AdminDashboard = () => {
     arrivees_matin: 0,
     arrivees_aprem: 0,
     pointages_matin: 0,
-    pointages_aprem: 0
+    pointages_aprem: 0,
+    liste_presents_matin: [],
+    liste_presents_aprem: []
   })
   const [isLoading, setIsLoading] = useState(true)
   
@@ -183,18 +184,58 @@ const AdminDashboard = () => {
         </>
       )}
       
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to="/admin/agents" className="btn btn-secondary">
-            Gérer les agents
-          </Link>
-          <Link to="/admin/qrcode" className="btn btn-secondary">
-            QR Code de pointage
-          </Link>
-          <Link to="/admin/pointages-detailles" className="btn btn-secondary">
-            Voir les pointages
-          </Link>
+      {/* Liste des agents présents en temps réel */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Agents présents le matin */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-blue-800 flex items-center">
+              <span className="mr-2">🌅</span> Agents présents ce matin
+            </h3>
+            <span className="text-sm bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
+              {stats.liste_presents_matin?.length || 0} agent(s)
+            </span>
+          </div>
+          <div className="p-4 max-h-64 overflow-y-auto">
+            {stats.liste_presents_matin && stats.liste_presents_matin.length > 0 ? (
+              <ul className="space-y-2">
+                {stats.liste_presents_matin.map((nom, index) => (
+                  <li key={index} className="flex items-center text-gray-700 py-1 border-b border-gray-100 last:border-0">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    {nom}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-center py-4">Aucun agent présent ce matin</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Agents présents l'après-midi */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-orange-50 px-6 py-4 border-b border-orange-100 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-orange-800 flex items-center">
+              <span className="mr-2">🌇</span> Agents présents cet après-midi
+            </h3>
+            <span className="text-sm bg-orange-200 text-orange-800 px-2 py-1 rounded-full">
+              {stats.liste_presents_aprem?.length || 0} agent(s)
+            </span>
+          </div>
+          <div className="p-4 max-h-64 overflow-y-auto">
+            {stats.liste_presents_aprem && stats.liste_presents_aprem.length > 0 ? (
+              <ul className="space-y-2">
+                {stats.liste_presents_aprem.map((nom, index) => (
+                  <li key={index} className="flex items-center text-gray-700 py-1 border-b border-gray-100 last:border-0">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    {nom}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-center py-4">Aucun agent présent cet après-midi</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

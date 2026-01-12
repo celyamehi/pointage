@@ -142,6 +142,29 @@ async def get_dashboard_stats() -> Dict[str, int]:
         agents_presents_aujourd_hui = len(agents_presents_total)
         agents_absents_aujourd_hui = max(0, total_agents - agents_presents_aujourd_hui)
         
+        # Récupérer les noms des agents présents
+        liste_presents_matin = []
+        liste_presents_aprem = []
+        
+        if agents_presents_matin or agents_presents_aprem:
+            try:
+                # Récupérer tous les agents pour avoir leurs noms
+                all_agents_ids = list(agents_presents_matin.union(agents_presents_aprem))
+                if all_agents_ids:
+                    agents_info = db.table("agents").select("id, nom, prenom").in_("id", all_agents_ids).execute()
+                    agents_dict = {a["id"]: f"{a['prenom']} {a['nom']}" for a in agents_info.data} if agents_info.data else {}
+                    
+                    # Liste des noms des agents présents le matin
+                    liste_presents_matin = sorted([agents_dict.get(aid, "Inconnu") for aid in agents_presents_matin])
+                    
+                    # Liste des noms des agents présents l'après-midi
+                    liste_presents_aprem = sorted([agents_dict.get(aid, "Inconnu") for aid in agents_presents_aprem])
+                    
+                    print(f"📋 Agents présents matin: {liste_presents_matin}")
+                    print(f"📋 Agents présents après-midi: {liste_presents_aprem}")
+            except Exception as e:
+                print(f"❌ Erreur récupération noms agents: {str(e)}")
+        
         result = {
             "total_agents": total_agents,
             "agents_presents_matin": agents_presents_matin_count,
@@ -151,7 +174,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
             "arrivees_matin": arrivees_matin,
             "arrivees_aprem": arrivees_aprem,
             "pointages_matin": pointages_matin,
-            "pointages_aprem": pointages_aprem
+            "pointages_aprem": pointages_aprem,
+            "liste_presents_matin": liste_presents_matin,
+            "liste_presents_aprem": liste_presents_aprem
         }
         
         print(f"✅ RÉSULTAT FINAL: {result}")
@@ -167,7 +192,9 @@ async def get_dashboard_stats() -> Dict[str, int]:
             "arrivees_matin": 0,
             "arrivees_aprem": 0,
             "pointages_matin": 0,
-            "pointages_aprem": 0
+            "pointages_aprem": 0,
+            "liste_presents_matin": [],
+            "liste_presents_aprem": []
         }
 
 
