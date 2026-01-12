@@ -92,10 +92,22 @@ PARAMETRES_PAIE_PAR_ROLE = {
 }
 
 
+def get_heure_debut_aprem(date_jour: date, params: ParametresPaie) -> time:
+    """
+    Retourne l'heure de début après-midi en fonction du jour de la semaine.
+    - Vendredi (weekday=4): 13h15
+    - Autres jours: heure définie dans les paramètres (par défaut 13h05)
+    """
+    if date_jour.weekday() == 4:  # Vendredi
+        return time(13, 15)
+    else:
+        return time(params.heure_debut_aprem // 60, params.heure_debut_aprem % 60)
+
+
 def calculer_retard_minutes(heure_arrivee: time, heure_debut_theorique: time = time(8, 5)) -> int:
     """
     Calcule le retard en minutes
-    Les retards sont comptés à partir de 8h05 (matin) et 13h05 (après-midi)
+    Les retards sont comptés à partir de 8h05 (matin) et 13h05 (après-midi, 13h15 le vendredi)
     """
     if heure_arrivee <= heure_debut_theorique:
         return 0
@@ -325,10 +337,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             })
                 
                 # Calculer le retard à l'arrivée après-midi si présent
-                # Utiliser l'heure de début spécifique au rôle
+                # Utiliser l'heure de début spécifique au rôle (13h15 le vendredi, sinon 13h05)
                 if jour_data.get("apres_midi_arrivee") and not absent_apres_midi:
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
-                    heure_debut_apres_midi = time(params.heure_debut_aprem // 60, params.heure_debut_aprem % 60)
+                    heure_debut_apres_midi = get_heure_debut_aprem(current_date, params)
                     
                     if heure_arrivee > heure_debut_apres_midi:
                         delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
@@ -400,10 +412,10 @@ async def calculer_paie_agent(agent_id: str, mois: int, annee: int) -> CalculPai
                             })
                 
                 # Calculer le retard à l'arrivée après-midi
-                # Utiliser l'heure de début spécifique au rôle
+                # Utiliser l'heure de début spécifique au rôle (13h15 le vendredi, sinon 13h05)
                 if jour_data.get("apres_midi_arrivee"):
                     heure_arrivee = datetime.strptime(jour_data["apres_midi_arrivee"], "%H:%M:%S").time()
-                    heure_debut_apres_midi = time(params.heure_debut_aprem // 60, params.heure_debut_aprem % 60)
+                    heure_debut_apres_midi = get_heure_debut_aprem(current_date, params)
                     
                     if heure_arrivee > heure_debut_apres_midi:
                         delta = datetime.combine(date.min, heure_arrivee) - datetime.combine(date.min, heure_debut_apres_midi)
